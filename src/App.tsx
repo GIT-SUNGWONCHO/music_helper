@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import type { Song } from './types'
 import { db, allSongs, saveSong, deleteSong, newSong, exportJson, importJson } from './db'
 import { seedSongs } from './seed'
@@ -14,8 +14,11 @@ export default function App() {
   const [ready, setReady] = useState(false)
 
   const refresh = useCallback(async () => setSongs(await allSongs()), [])
+  const initialized = useRef(false)
 
   useEffect(() => {
+    if (initialized.current) return
+    initialized.current = true
     ;(async () => {
       const count = await db.songs.count()
       if (count === 0) await db.songs.bulkPut(seedSongs())
