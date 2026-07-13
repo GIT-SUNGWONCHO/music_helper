@@ -5,6 +5,10 @@ import { seedSongs } from './seed'
 import { SongList } from './components/SongList'
 import { SongView } from './components/SongView'
 import { SongEditor } from './components/SongEditor'
+import { SettingsModal } from './components/SettingsModal'
+import { GenerateModal } from './components/GenerateModal'
+
+type Modal = 'none' | 'generate' | 'settings'
 
 type Screen = { name: 'list' } | { name: 'view'; id: string } | { name: 'edit'; id: string }
 
@@ -12,6 +16,7 @@ export default function App() {
   const [songs, setSongs] = useState<Song[]>([])
   const [screen, setScreen] = useState<Screen>({ name: 'list' })
   const [ready, setReady] = useState(false)
+  const [modal, setModal] = useState<Modal>('none')
 
   const refresh = useCallback(async () => setSongs(await allSongs()), [])
   const initialized = useRef(false)
@@ -46,6 +51,12 @@ export default function App() {
     await refresh()
     setScreen({ name: 'edit', id: s.id })
   }
+  async function handleGenerated(s: Song) {
+    await saveSong(s)
+    await refresh()
+    setModal('none')
+    setScreen({ name: 'edit', id: s.id })
+  }
   async function handleExport() {
     const text = await exportJson()
     const blob = new Blob([text], { type: 'application/json' })
@@ -67,21 +78,30 @@ export default function App() {
 
   if (!ready) return <div className="loading">불러오는 중…</div>
 
-  if (screen.name === 'list') {
-    return (
-      <SongList songs={songs} onOpen={(id) => setScreen({ name: 'view', id })}
-        onNew={handleNew} onExport={handleExport} onImport={handleImport} />
-    )
-  }
-
-  const song = current(screen.id)
-  if (!song) {
+  const song = screen.name === 'list' ? undefined : current(screen.id)
+  if (screen.name !== 'list' && !song) {
     setScreen({ name: 'list' })
     return null
   }
 
-  if (screen.name === 'view') {
-    return <SongView song={song} onEdit={() => setScreen({ name: 'edit', id: song.id })} onBack={() => setScreen({ name: 'list' })} />
-  }
-  return <SongEditor song={song} onSave={handleSave} onCancel={() => setScreen({ name: 'view', id: song.id })} onDelete={handleDelete} />
+  return (
+    <>
+      {screen.name === 'list' && (
+        <SongList songs={songs} onOpen={(id) => setScreen({ name: 'view', id })}
+          onNew={handleNew} onGenerate={() => setModal('generate')} onSettings={() => setModal('settings')}
+          onExport={handleExport} onImport={handleImport} />
+      )}
+      {screen.name === 'view' && song && (
+        <SongView song={song} onEdit={() => setScreen({ name: 'edit', id: song.id })} onBack={() => setScreen({ name: 'list' })} />
+      )}
+      {screen.name === 'edit' && song && (
+        <SongEditor song={song} onSave={handleSave} onCancel={() => setScreen({ name: 'view', id: song.id })} onDelete={handleDelete} />
+      )}
+
+      {modal === 'settings' && <SettingsModal onClose={() => setModal('none')} />}
+      {modal === 'generate' && (
+        <GenerateModal onClose={() => setModal('none')} onOpenSettings={() => setModal('settings')} onGenerated={handleGenerated} />
+      )}
+    </>
+  )
 }

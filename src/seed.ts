@@ -12,7 +12,9 @@ export function seedSongs(): Song[] {
     artist: 'Radiohead',
     originalKey: 'G',
     tempo: 92,
-    tags: ['Rock', 'Alternative', '우울', '기타'],
+    genreTags: ['Rock', 'Alternative'],
+    moodTags: ['우울', '잔잔'],
+    status: 'practicing',
     sections: [
       newSection('Intro', [
         b('G'), b(['Gsus4', 'G']), b('B'), b(['Bsus4', 'B']),
@@ -36,7 +38,9 @@ export function seedSongs(): Song[] {
     artist: '아이유',
     originalKey: 'C', // 코드는 C 셰이프 표기 (원곡은 카포3 → 울림키 Eb)
     tempo: 75,
-    tags: ['Ballad', '발라드', '잔잔', '기타', '카포3'],
+    genreTags: ['Ballad', 'K-Pop'],
+    moodTags: ['잔잔', '그리움'],
+    status: 'want',
     sections: [
       newSection('Verse', [
         b('FM7', '이 밤 그날의'), b(['Gsus4', 'G'], '반딧불을'), b('Em7', '당신의'), b('Am7'),

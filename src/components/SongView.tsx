@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { Song } from '../types'
+import { statusLabel } from '../types'
 import { transposeNote, keyDistance } from '../music/chords'
 import { collectChords } from '../music/song'
 import { isHardChord } from '../music/diagrams'
@@ -51,8 +52,10 @@ export function SongView({ song, onEdit, onBack }: Props) {
         </div>
 
         <div className="ctrl meta">
+          <span className={'chip chip--status chip--' + song.status}>{statusLabel(song.status)}</span>
           {song.tempo ? <span className="chip">♩ {song.tempo}</span> : null}
-          {song.tags.map((t) => <span key={t} className="chip chip--tag">{t}</span>)}
+          {song.genreTags.map((t) => <span key={'g' + t} className="chip chip--genre">{t}</span>)}
+          {song.moodTags.map((t) => <span key={'m' + t} className="chip chip--mood">{t}</span>)}
         </div>
       </div>
 

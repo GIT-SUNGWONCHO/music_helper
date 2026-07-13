@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Song, Section, Bar } from '../types'
+import { PRACTICE_STATUSES } from '../types'
 import { newBar, newSection } from '../db'
 import { NOTE_NAMES } from '../music/chords'
 
@@ -88,11 +89,31 @@ export function SongEditor({ song, onSave, onCancel, onDelete }: Props) {
               onChange={(e) => set('tempo', e.target.value ? +e.target.value : undefined)} />
           </label>
         </div>
-        <label className="field">
-          <span>태그 (쉼표로 구분)</span>
-          <input value={draft.tags.join(', ')}
-            onChange={(e) => set('tags', e.target.value.split(',').map((t) => t.trim()).filter(Boolean))} />
-        </label>
+        <div className="field">
+          <span>연습 상태</span>
+          <div className="seg">
+            {PRACTICE_STATUSES.map((st) => (
+              <button
+                key={st.value}
+                type="button"
+                className={'seg__btn seg__btn--' + st.value + (draft.status === st.value ? ' is-on' : '')}
+                onClick={() => set('status', st.value)}
+              >{st.label}</button>
+            ))}
+          </div>
+        </div>
+        <div className="form__row">
+          <label className="field field--grow">
+            <span>분위기 태그 (쉼표로 구분)</span>
+            <input value={draft.moodTags.join(', ')} placeholder="잔잔, 신나는, 우울"
+              onChange={(e) => set('moodTags', e.target.value.split(',').map((t) => t.trim()).filter(Boolean))} />
+          </label>
+          <label className="field field--grow">
+            <span>장르 태그 (쉼표로 구분)</span>
+            <input value={draft.genreTags.join(', ')} placeholder="Rock, Ballad, City Pop"
+              onChange={(e) => set('genreTags', e.target.value.split(',').map((t) => t.trim()).filter(Boolean))} />
+          </label>
+        </div>
       </div>
 
       <p className="hint">마디를 클릭해 <b>코드</b>와 <b>가사</b>를 바로 입력하세요. 한 마디에 코드 두 개는 띄어쓰기로 (예: <code>Gsus4 G</code>).</p>

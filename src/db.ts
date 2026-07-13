@@ -14,6 +14,17 @@ export class MusicHelperDb extends Dexie {
     this.version(2)
       .stores({ songs: 'id, title, artist, originalKey, updatedAt, *tags' })
       .upgrade((tx) => tx.table('songs').clear())
+    // v3: split tags into mood/genre + add practice status. Migrate existing rows in place.
+    this.version(3)
+      .stores({ songs: 'id, title, artist, originalKey, updatedAt, status, *moodTags, *genreTags' })
+      .upgrade((tx) =>
+        tx.table('songs').toCollection().modify((s: Record<string, unknown>) => {
+          s.moodTags = s.moodTags ?? []
+          s.genreTags = s.genreTags ?? (Array.isArray(s.tags) ? s.tags : [])
+          s.status = s.status ?? 'want'
+          delete s.tags
+        }),
+      )
   }
 }
 
@@ -45,7 +56,9 @@ export function newSong(partial?: Partial<Song>): Song {
     artist: '',
     originalKey: 'C',
     tempo: undefined,
-    tags: [],
+    moodTags: [],
+    genreTags: [],
+    status: 'want',
     sections: [newSection()],
     createdAt: now,
     updatedAt: now,

@@ -14,6 +14,19 @@ export interface Section {
   bars: Bar[]
 }
 
+/** 연습 상태 플래그 — 곡마다 하나. */
+export type PracticeStatus = 'want' | 'practicing' | 'done'
+
+export const PRACTICE_STATUSES: { value: PracticeStatus; label: string }[] = [
+  { value: 'want', label: '하고싶음' },
+  { value: 'practicing', label: '연습중' },
+  { value: 'done', label: '완료' },
+]
+
+export function statusLabel(s: PracticeStatus): string {
+  return PRACTICE_STATUSES.find((x) => x.value === s)?.label ?? s
+}
+
 export interface Song {
   id: string
   title: string
@@ -22,8 +35,12 @@ export interface Song {
   originalKey: string
   /** 빠르기 BPM (0/undefined = 미표기) */
   tempo?: number
-  /** 장르 / 기분 / 악기구성 등 자유 태그 */
-  tags: string[]
+  /** 분위기 태그 (예: 잔잔, 신나는, 우울) */
+  moodTags: string[]
+  /** 장르 태그 (예: Rock, Ballad, City Pop) */
+  genreTags: string[]
+  /** 연습 상태 */
+  status: PracticeStatus
   sections: Section[]
   createdAt: number
   updatedAt: number
