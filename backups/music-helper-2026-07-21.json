@@ -1,0 +1,1517 @@
+{
+  "app": "music-helper",
+  "version": 2,
+  "songs": [
+    {
+      "id": "xnijt7p",
+      "title": "Creep",
+      "artist": "Radiohead",
+      "originalKey": "G",
+      "tempo": 92,
+      "moodTags": [
+        "우울한",
+        "처절한",
+        "쓸쓸한"
+      ],
+      "genreTags": [
+        "Alternative Rock",
+        "Grunge"
+      ],
+      "status": "practicing",
+      "sections": [
+        {
+          "id": "xnijt6x",
+          "label": "Intro",
+          "bars": [
+            {
+              "id": "xno5bjb",
+              "chords": [
+                "G"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xno5bjc",
+              "chords": [
+                "Gsus4",
+                "G"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xno5bjd",
+              "chords": [
+                "B"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xno5bje",
+              "chords": [
+                "Bsus4",
+                "B"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xnhg7tz",
+              "chords": [
+                "C"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xnhg7u0",
+              "chords": [
+                "Csus4",
+                "C"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xnhg7u1",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xnhg7u2",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": ""
+            }
+          ]
+        },
+        {
+          "id": "xnijt6y",
+          "label": "Verse 1",
+          "bars": [
+            {
+              "id": "xnhg7u3",
+              "chords": [
+                "G"
+              ],
+              "lyric": "When you were here before"
+            },
+            {
+              "id": "xnhg7u4",
+              "chords": [
+                "Gsus4",
+                "G"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xnhg7u5",
+              "chords": [
+                "B"
+              ],
+              "lyric": "Couldn't look you in the eye"
+            },
+            {
+              "id": "xnhg7u6",
+              "chords": [
+                "Bsus4",
+                "B"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xnhg7u7",
+              "chords": [
+                "C"
+              ],
+              "lyric": "You're just like an angel"
+            },
+            {
+              "id": "xnhg7u8",
+              "chords": [
+                "Csus4",
+                "C"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xnhg7uu",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": "Your skin makes me cry"
+            },
+            {
+              "id": "xnhg7uv",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xnhg7uw",
+              "chords": [
+                "G"
+              ],
+              "lyric": "You float like a feather"
+            },
+            {
+              "id": "xnhg7ux",
+              "chords": [
+                "Gsus4",
+                "G"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xnhg7uy",
+              "chords": [
+                "B"
+              ],
+              "lyric": "In a beautiful world"
+            },
+            {
+              "id": "xnhg7uz",
+              "chords": [
+                "Bsus4",
+                "B"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajpc5",
+              "chords": [
+                "C"
+              ],
+              "lyric": "I wish I was special"
+            },
+            {
+              "id": "xrajpc4",
+              "chords": [
+                "Csus4",
+                "C"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajpc3",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": "You're so very special"
+            },
+            {
+              "id": "xrajpc2",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": ""
+            }
+          ]
+        },
+        {
+          "id": "xnijt6z",
+          "label": "Chorus 1",
+          "bars": [
+            {
+              "id": "xrajpbg",
+              "chords": [
+                "G"
+              ],
+              "lyric": "But I'm a creep"
+            },
+            {
+              "id": "xrajpbf",
+              "chords": [
+                "Gsus4",
+                "G"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajpbe",
+              "chords": [
+                "B"
+              ],
+              "lyric": "I'm a weirdo"
+            },
+            {
+              "id": "xrajpbd",
+              "chords": [
+                "Bsus4",
+                "B"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajpbc",
+              "chords": [
+                "C"
+              ],
+              "lyric": "What the hell am I doing here?"
+            },
+            {
+              "id": "xrajpbb",
+              "chords": [
+                "Csus4",
+                "C"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajpba",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": "I don't belong here"
+            },
+            {
+              "id": "xrajpb9",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": ""
+            }
+          ]
+        },
+        {
+          "id": "xnijt7l",
+          "label": "Verse 2",
+          "bars": [
+            {
+              "id": "xrajpb8",
+              "chords": [
+                "G"
+              ],
+              "lyric": "I don't care if it hurts"
+            },
+            {
+              "id": "xrajpb7",
+              "chords": [
+                "Gsus4",
+                "G"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajpal",
+              "chords": [
+                "B"
+              ],
+              "lyric": "I wanna have control"
+            },
+            {
+              "id": "xrajpak",
+              "chords": [
+                "Bsus4",
+                "B"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajpaj",
+              "chords": [
+                "C"
+              ],
+              "lyric": "I want a perfect body"
+            },
+            {
+              "id": "xrajpai",
+              "chords": [
+                "Csus4",
+                "C"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajpah",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": "I want a perfect soul"
+            },
+            {
+              "id": "xrajpag",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajpaf",
+              "chords": [
+                "G"
+              ],
+              "lyric": "I want you to notice"
+            },
+            {
+              "id": "xrajpae",
+              "chords": [
+                "Gsus4",
+                "G"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajpad",
+              "chords": [
+                "B"
+              ],
+              "lyric": "When I'm not around"
+            },
+            {
+              "id": "xrajpac",
+              "chords": [
+                "Bsus4",
+                "B"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajp9q",
+              "chords": [
+                "C"
+              ],
+              "lyric": "You're so very special"
+            },
+            {
+              "id": "xrajp9p",
+              "chords": [
+                "Csus4",
+                "C"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajp9o",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": "I wish I was special"
+            },
+            {
+              "id": "xrajp9n",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": ""
+            }
+          ]
+        },
+        {
+          "id": "xnijt7m",
+          "label": "Chorus 2",
+          "bars": [
+            {
+              "id": "xrajp9m",
+              "chords": [
+                "G"
+              ],
+              "lyric": "But I'm a creep"
+            },
+            {
+              "id": "xrajp9l",
+              "chords": [
+                "Gsus4",
+                "G"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajp9k",
+              "chords": [
+                "B"
+              ],
+              "lyric": "I'm a weirdo"
+            },
+            {
+              "id": "xrajp9j",
+              "chords": [
+                "Bsus4",
+                "B"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajp9i",
+              "chords": [
+                "C"
+              ],
+              "lyric": "What the hell am I doing here?"
+            },
+            {
+              "id": "xrajp9h",
+              "chords": [
+                "Csus4",
+                "C"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajp8v",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": "I don't belong here"
+            },
+            {
+              "id": "xrajp8u",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": "oh, oh"
+            }
+          ]
+        },
+        {
+          "id": "xnijt7n",
+          "label": "Bridge",
+          "bars": [
+            {
+              "id": "xrajp8t",
+              "chords": [
+                "G"
+              ],
+              "lyric": "She's running out the door"
+            },
+            {
+              "id": "xrajp8s",
+              "chords": [
+                "Gsus4",
+                "G"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajp8r",
+              "chords": [
+                "B"
+              ],
+              "lyric": "She's running out"
+            },
+            {
+              "id": "xrajp8q",
+              "chords": [
+                "Bsus4",
+                "B"
+              ],
+              "lyric": "She run, run, run, run"
+            },
+            {
+              "id": "xrajp8p",
+              "chords": [
+                "C"
+              ],
+              "lyric": "Run"
+            },
+            {
+              "id": "xrajp8o",
+              "chords": [
+                "Csus4",
+                "C"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajp8n",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": "Run"
+            },
+            {
+              "id": "xrajp8m",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": ""
+            }
+          ]
+        },
+        {
+          "id": "xnijt7o",
+          "label": "Outro",
+          "bars": [
+            {
+              "id": "xrajp80",
+              "chords": [
+                "G"
+              ],
+              "lyric": "Whatever makes you happy"
+            },
+            {
+              "id": "xrajp7z",
+              "chords": [
+                "Gsus4",
+                "G"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajp7y",
+              "chords": [
+                "B"
+              ],
+              "lyric": "Whatever you want"
+            },
+            {
+              "id": "xrajp7x",
+              "chords": [
+                "Bsus4",
+                "B"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajp7w",
+              "chords": [
+                "C"
+              ],
+              "lyric": "You're so very special"
+            },
+            {
+              "id": "xrajp7v",
+              "chords": [
+                "Csus4",
+                "C"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajp7u",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": "I wish I was special"
+            },
+            {
+              "id": "xrajp7t",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajp7s",
+              "chords": [
+                "G"
+              ],
+              "lyric": "But I'm a creep"
+            },
+            {
+              "id": "xrajp7r",
+              "chords": [
+                "Gsus4",
+                "G"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajp75",
+              "chords": [
+                "B"
+              ],
+              "lyric": "I'm a weirdo"
+            },
+            {
+              "id": "xrajp74",
+              "chords": [
+                "Bsus4",
+                "B"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajp73",
+              "chords": [
+                "C"
+              ],
+              "lyric": "What the hell am I doing here?"
+            },
+            {
+              "id": "xrajp72",
+              "chords": [
+                "Csus4",
+                "C"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajp71",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": "I don't belong here"
+            },
+            {
+              "id": "xrajp70",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xrajp6z",
+              "chords": [
+                "G"
+              ],
+              "lyric": "I don't belong here"
+            }
+          ]
+        }
+      ],
+      "createdAt": 1784386694663,
+      "updatedAt": 1784445434575,
+      "pinnedChords": [],
+      "fingerings": {
+        "Csus4": 1
+      },
+      "capoFret": 0
+    },
+    {
+      "id": "xoif6p3",
+      "title": "Creep",
+      "artist": "Radiohead",
+      "originalKey": "G",
+      "tempo": 92,
+      "moodTags": [
+        "우울",
+        "잔잔"
+      ],
+      "genreTags": [
+        "Rock",
+        "Alternative"
+      ],
+      "status": "practicing",
+      "sections": [
+        {
+          "id": "xsgqxf",
+          "label": "Intro",
+          "bars": [
+            {
+              "id": "xsgqx7",
+              "chords": [
+                "G"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xsgqx8",
+              "chords": [
+                "Gsus4",
+                "G"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xsgqx9",
+              "chords": [
+                "B"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xsgqxa",
+              "chords": [
+                "Bsus4",
+                "B"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xsgqxb",
+              "chords": [
+                "C"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xsgqxc",
+              "chords": [
+                "Csus4",
+                "C"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xsgqxd",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xsgqxe",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": ""
+            }
+          ]
+        },
+        {
+          "id": "xoif6o8",
+          "label": "Verse",
+          "bars": [
+            {
+              "id": "xsgqxg",
+              "chords": [
+                "G"
+              ],
+              "lyric": "When you were here before"
+            },
+            {
+              "id": "xoif6n8",
+              "chords": [
+                "Gsus4",
+                "G"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xoif6n9",
+              "chords": [
+                "B"
+              ],
+              "lyric": "couldn't look you in the eye"
+            },
+            {
+              "id": "xoif6na",
+              "chords": [
+                "Bsus4",
+                "B"
+              ],
+              "lyric": "You're just like"
+            },
+            {
+              "id": "xoif6nb",
+              "chords": [
+                "C"
+              ],
+              "lyric": "an angel"
+            },
+            {
+              "id": "xoif6nc",
+              "chords": [
+                "Csus4",
+                "C"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xoif6nd",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": "your skin makes me cry"
+            },
+            {
+              "id": "xoif6ne",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": "you float like a"
+            },
+            {
+              "id": "xoif6nf",
+              "chords": [
+                "G"
+              ],
+              "lyric": "feather"
+            },
+            {
+              "id": "xoif6ng",
+              "chords": [
+                "Gsus4",
+                "G"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xoif6nh",
+              "chords": [
+                "B"
+              ],
+              "lyric": "in a beautiful world"
+            },
+            {
+              "id": "xoif6o3",
+              "chords": [
+                "Bsus4",
+                "B"
+              ],
+              "lyric": "i wish i was"
+            },
+            {
+              "id": "xoif6o4",
+              "chords": [
+                "C"
+              ],
+              "lyric": "special"
+            },
+            {
+              "id": "xoif6o5",
+              "chords": [
+                "Csus4",
+                "C"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xoif6o6",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": "you're so fucking special"
+            },
+            {
+              "id": "xoif6o7",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": "but i'm a"
+            }
+          ]
+        },
+        {
+          "id": "xoif6p2",
+          "label": "Chorus",
+          "bars": [
+            {
+              "id": "xoif6o9",
+              "chords": [
+                "G"
+              ],
+              "lyric": "creep"
+            },
+            {
+              "id": "xoif6oa",
+              "chords": [
+                "Gsus4",
+                "G"
+              ],
+              "lyric": "i'm a"
+            },
+            {
+              "id": "xoif6ob",
+              "chords": [
+                "B"
+              ],
+              "lyric": "weirdo"
+            },
+            {
+              "id": "xoif6oc",
+              "chords": [
+                "Bsus4",
+                "B"
+              ],
+              "lyric": "what the hell am i"
+            },
+            {
+              "id": "xoif6oy",
+              "chords": [
+                "C"
+              ],
+              "lyric": "doing here"
+            },
+            {
+              "id": "xoif6oz",
+              "chords": [
+                "Csus4",
+                "C"
+              ],
+              "lyric": "i don't belong here"
+            },
+            {
+              "id": "xoif6p0",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xoif6p1",
+              "chords": [
+                "Cm"
+              ],
+              "lyric": ""
+            }
+          ]
+        }
+      ],
+      "createdAt": 1784264622993,
+      "updatedAt": 1784264622993
+    },
+    {
+      "id": "xoif6qx",
+      "title": "밤편지",
+      "artist": "아이유",
+      "originalKey": "C",
+      "tempo": 75,
+      "moodTags": [
+        "잔잔",
+        "그리움"
+      ],
+      "genreTags": [
+        "Ballad",
+        "K-Pop"
+      ],
+      "status": "want",
+      "sections": [
+        {
+          "id": "xoif6q2",
+          "label": "Verse",
+          "bars": [
+            {
+              "id": "xoif6pu",
+              "chords": [
+                "FM7"
+              ],
+              "lyric": "이 밤 그날의"
+            },
+            {
+              "id": "xoif6pv",
+              "chords": [
+                "Gsus4",
+                "G"
+              ],
+              "lyric": "반딧불을"
+            },
+            {
+              "id": "xoif6pw",
+              "chords": [
+                "Em7"
+              ],
+              "lyric": "당신의"
+            },
+            {
+              "id": "xoif6px",
+              "chords": [
+                "Am7"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xoif6py",
+              "chords": [
+                "Dm7"
+              ],
+              "lyric": "음 사랑한다는"
+            },
+            {
+              "id": "xoif6pz",
+              "chords": [
+                "F/G",
+                "G"
+              ],
+              "lyric": "말이에요"
+            },
+            {
+              "id": "xoif6q0",
+              "chords": [
+                "CM7"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xoif6q1",
+              "chords": [
+                "FM7"
+              ],
+              "lyric": ""
+            }
+          ]
+        },
+        {
+          "id": "xoif6qw",
+          "label": "Chorus",
+          "bars": [
+            {
+              "id": "xoif6qo",
+              "chords": [
+                "FM7"
+              ],
+              "lyric": "난 파도가"
+            },
+            {
+              "id": "xoif6qp",
+              "chords": [
+                "FmM7",
+                "Fm6"
+              ],
+              "lyric": "머물던"
+            },
+            {
+              "id": "xoif6qq",
+              "chords": [
+                "Em7"
+              ],
+              "lyric": "모래 위에 적힌"
+            },
+            {
+              "id": "xoif6qr",
+              "chords": [
+                "Am7"
+              ],
+              "lyric": "글씨처럼"
+            },
+            {
+              "id": "xoif6qs",
+              "chords": [
+                "Dm7"
+              ],
+              "lyric": "그대가 멀리"
+            },
+            {
+              "id": "xoif6qt",
+              "chords": [
+                "E7"
+              ],
+              "lyric": "사라져 버릴 것 같아"
+            },
+            {
+              "id": "xoif6qu",
+              "chords": [
+                "Am7",
+                "G/B"
+              ],
+              "lyric": "늘 그리워"
+            },
+            {
+              "id": "xoif6qv",
+              "chords": [
+                "C",
+                "CM7/E"
+              ],
+              "lyric": "그리워"
+            }
+          ]
+        }
+      ],
+      "createdAt": 1784264622994,
+      "updatedAt": 1784264622994
+    },
+    {
+      "id": "xwf375p",
+      "title": "입춘",
+      "artist": "한로로",
+      "originalKey": "F",
+      "tempo": 81,
+      "moodTags": [
+        "애절한",
+        "쓸쓸한",
+        "희망찬"
+      ],
+      "genreTags": [
+        "인디",
+        "록"
+      ],
+      "status": "want",
+      "capoFret": 0,
+      "sections": [
+        {
+          "id": "xub1nt",
+          "label": "Intro",
+          "bars": [
+            {
+              "id": "xwfj5yf",
+              "chords": [
+                "F"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xwfj5ye",
+              "chords": [
+                "F"
+              ],
+              "lyric": ""
+            }
+          ]
+        },
+        {
+          "id": "xo390rd",
+          "label": "Verse",
+          "bars": [
+            {
+              "id": "xwfj5yd",
+              "chords": [
+                "F"
+              ],
+              "lyric": "얼어붙은 마음에"
+            },
+            {
+              "id": "xwfj5yc",
+              "chords": [
+                "F"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xwfj5yb",
+              "chords": [
+                "G"
+              ],
+              "lyric": "누가 입 맞춰줄까요"
+            },
+            {
+              "id": "xwfj5ya",
+              "chords": [
+                "G"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xwfj5y9",
+              "chords": [
+                "Am"
+              ],
+              "lyric": "봄을 기다린다는 말"
+            },
+            {
+              "id": "xwfj5y8",
+              "chords": [
+                "Am"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xwfj5y7",
+              "chords": [
+                "Bb"
+              ],
+              "lyric": "그 말의 근거가 될 수 있나요"
+            },
+            {
+              "id": "xwfj5xl",
+              "chords": [
+                "C"
+              ],
+              "lyric": ""
+            }
+          ]
+        },
+        {
+          "id": "xo390re",
+          "label": "Pre-Chorus",
+          "bars": [
+            {
+              "id": "xwfj5xk",
+              "chords": [
+                "F"
+              ],
+              "lyric": "바삐 오가던 바람"
+            },
+            {
+              "id": "xwfj5xj",
+              "chords": [
+                "F"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xwfj5xi",
+              "chords": [
+                "G"
+              ],
+              "lyric": "여유 생겨 말하네요"
+            },
+            {
+              "id": "xwfj5xh",
+              "chords": [
+                "G"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xwfj5xg",
+              "chords": [
+                "Am"
+              ],
+              "lyric": "내가 기다린다는 봄"
+            },
+            {
+              "id": "xwfj5xf",
+              "chords": [
+                "Am"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xwfj5xe",
+              "chords": [
+                "Bb"
+              ],
+              "lyric": "왔으니 이번엔 놓지 말라고"
+            },
+            {
+              "id": "xwfj5xd",
+              "chords": [
+                "C"
+              ],
+              "lyric": ""
+            }
+          ]
+        },
+        {
+          "id": "xo390rf",
+          "label": "Chorus",
+          "bars": [
+            {
+              "id": "xwfj5xc",
+              "chords": [
+                "F"
+              ],
+              "lyric": "아슬히 고개 내민 내게"
+            },
+            {
+              "id": "xwfj5wq",
+              "chords": [
+                "Am"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xwfiix6",
+              "chords": [
+                "Bb"
+              ],
+              "lyric": "첫 봄인사를 건네줘요"
+            },
+            {
+              "id": "xwfiix5",
+              "chords": [
+                "Bbm"
+              ],
+              "lyric": "피울 수 있게 도와줘요"
+            },
+            {
+              "id": "xwfiix4",
+              "chords": [
+                "F"
+              ],
+              "lyric": "이 마음 저무는 날까지"
+            },
+            {
+              "id": "xwfiix3",
+              "chords": [
+                "Am",
+                "A"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xwfiix2",
+              "chords": [
+                "Bb"
+              ],
+              "lyric": "푸른 낭만을 선물할게"
+            },
+            {
+              "id": "xwfiix1",
+              "chords": [
+                "Bbm"
+              ],
+              "lyric": "초라한 나를 꺾어가요"
+            }
+          ]
+        },
+        {
+          "id": "xo390rg",
+          "label": "Interlude",
+          "bars": [
+            {
+              "id": "xwfiix0",
+              "chords": [
+                "F"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xwfiiwz",
+              "chords": [
+                "Am"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xwfiiwy",
+              "chords": [
+                "Bb"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xwfiiwc",
+              "chords": [
+                "Bbm"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xwfiiwb",
+              "chords": [
+                "F"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xwfiiwa",
+              "chords": [
+                "Am"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xwfiiw9",
+              "chords": [
+                "Bb"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xwfiiw8",
+              "chords": [
+                "Bbm"
+              ],
+              "lyric": ""
+            }
+          ]
+        },
+        {
+          "id": "xo390rh",
+          "label": "Bridge",
+          "bars": [
+            {
+              "id": "xwfiiw7",
+              "chords": [
+                "F"
+              ],
+              "lyric": "아슬히 고개 내민 내게"
+            },
+            {
+              "id": "xwfiiw6",
+              "chords": [
+                "Am"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xwfiiw5",
+              "chords": [
+                "Bb"
+              ],
+              "lyric": "첫 봄인사를 건네줘요"
+            },
+            {
+              "id": "xwfiiw4",
+              "chords": [
+                "Bbm"
+              ],
+              "lyric": "피울 수 있게 도와줘요"
+            }
+          ]
+        },
+        {
+          "id": "xo390ri",
+          "label": "Chorus",
+          "bars": [
+            {
+              "id": "xwfiiw3",
+              "chords": [
+                "F#"
+              ],
+              "lyric": "아슬히 고개 내민 내게"
+            },
+            {
+              "id": "xwfiivh",
+              "chords": [
+                "Bbm"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xwfiivg",
+              "chords": [
+                "B"
+              ],
+              "lyric": "첫 봄인사를 건네줘요"
+            },
+            {
+              "id": "xwfiivf",
+              "chords": [
+                "Bm"
+              ],
+              "lyric": "피울 수 있게 도와줘요"
+            },
+            {
+              "id": "xwfiive",
+              "chords": [
+                "F#"
+              ],
+              "lyric": "이 마음 저무는 날까지"
+            },
+            {
+              "id": "xwfiivd",
+              "chords": [
+                "Bbm",
+                "Bb7"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xwfiivc",
+              "chords": [
+                "B"
+              ],
+              "lyric": "푸른 낭만을 선물할게"
+            },
+            {
+              "id": "xwfiivb",
+              "chords": [
+                "Bm"
+              ],
+              "lyric": "초라한 나를 꺾어가요"
+            }
+          ]
+        },
+        {
+          "id": "xo390rj",
+          "label": "Outro",
+          "bars": [
+            {
+              "id": "xwfiiva",
+              "chords": [
+                "B"
+              ],
+              "lyric": "이 벅찬 봄날이 시들 때"
+            },
+            {
+              "id": "xwfiiv9",
+              "chords": [
+                "B"
+              ],
+              "lyric": ""
+            },
+            {
+              "id": "xwfiiv8",
+              "chords": [
+                "Bm"
+              ],
+              "lyric": "한 번만 나를 돌아봐요"
+            },
+            {
+              "id": "xwfiium",
+              "chords": [
+                "Bm"
+              ],
+              "lyric": ""
+            }
+          ]
+        }
+      ],
+      "createdAt": 1784466012223,
+      "updatedAt": 1784466284518,
+      "fingerings": {}
+    }
+  ]
+}
