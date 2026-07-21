@@ -16,9 +16,9 @@ export function MeasureGrid({ sections, semitones }: Props) {
           <div className="bars">
             {sec.bars.map((bar) => (
               <div className="bar" key={bar.id}>
-                <div className="bar__chords">
+                <div className="bar__chords" data-count={bar.chords.length}>
                   {bar.chords.length === 0 ? (
-                    <span className="bar__hold">•</span>
+                    <span className="bar__hold">%</span>
                   ) : (
                     bar.chords.map((c, i) => (
                       <span className="bar__chord" key={i}>{transposeChord(c, semitones)}</span>

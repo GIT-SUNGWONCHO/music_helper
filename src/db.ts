@@ -59,6 +59,7 @@ export function newSong(partial?: Partial<Song>): Song {
     moodTags: [],
     genreTags: [],
     status: 'want',
+    capoFret: 0,
     sections: [newSection()],
     createdAt: now,
     updatedAt: now,

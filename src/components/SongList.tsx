@@ -1,35 +1,45 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import type { Song, PracticeStatus } from '../types'
 import { PRACTICE_STATUSES } from '../types'
-import { getUsage, estimateCostUsd, USD_TO_KRW } from '../ai/usage'
 
 interface Props {
   songs: Song[]
   onOpen: (id: string) => void
+  onDelete: (id: string) => void
   onNew: () => void
   onGenerate: () => void
   onSettings: () => void
-  onExport: () => void
-  onImport: (file: File) => void
 }
 
-type StatusFilter = 'all' | PracticeStatus
+type FilterCat = 'status' | 'mood' | 'genre'
 
-function songTags(s: Song): string[] {
-  return [...s.genreTags, ...s.moodTags]
+function distinctTags(songs: Song[], pick: (s: Song) => string[]): string[] {
+  const counts = new Map<string, number>()
+  for (const s of songs) for (const t of pick(s)) counts.set(t, (counts.get(t) ?? 0) + 1)
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([t]) => t)
 }
 
-export function SongList({ songs, onOpen, onNew, onGenerate, onSettings, onExport, onImport }: Props) {
+function toggleIn<T>(arr: T[], v: T): T[] {
+  return arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]
+}
+
+export function SongList({ songs, onOpen, onDelete, onNew, onGenerate, onSettings }: Props) {
   const [query, setQuery] = useState('')
-  const [status, setStatus] = useState<StatusFilter>('all')
-  const [activeTags, setActiveTags] = useState<string[]>([])
+  const [statusF, setStatusF] = useState<PracticeStatus[]>([])
+  const [moodF, setMoodF] = useState<string[]>([])
+  const [genreF, setGenreF] = useState<string[]>([])
+  const [openCat, setOpenCat] = useState<FilterCat | null>(null)
+  const [fabOpen, setFabOpen] = useState(false)
 
-  const allTags = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const s of songs) for (const t of songTags(s)) counts.set(t, (counts.get(t) ?? 0) + 1)
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([t]) => t)
-  }, [songs])
+  useEffect(() => {
+    if (!fabOpen) return
+    const close = () => setFabOpen(false)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [fabOpen])
 
+  const allMoods = useMemo(() => distinctTags(songs, (s) => s.moodTags), [songs])
+  const allGenres = useMemo(() => distinctTags(songs, (s) => s.genreTags), [songs])
   const statusCounts = useMemo(() => {
     const m: Record<string, number> = {}
     for (const s of songs) m[s.status] = (m[s.status] ?? 0) + 1
@@ -39,103 +49,127 @@ export function SongList({ songs, onOpen, onNew, onGenerate, onSettings, onExpor
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return songs.filter((s) => {
-      if (status !== 'all' && s.status !== status) return false
-      const tags = songTags(s)
-      if (activeTags.length && !activeTags.every((t) => tags.includes(t))) return false
+      if (statusF.length && !statusF.includes(s.status)) return false
+      if (moodF.length && !moodF.some((t) => s.moodTags.includes(t))) return false
+      if (genreF.length && !genreF.some((t) => s.genreTags.includes(t))) return false
       if (!q) return true
+      const tags = [...s.genreTags, ...s.moodTags]
       return (
         s.title.toLowerCase().includes(q) ||
         s.artist.toLowerCase().includes(q) ||
         tags.some((t) => t.toLowerCase().includes(q))
       )
     })
-  }, [songs, query, status, activeTags])
+  }, [songs, query, statusF, moodF, genreF])
 
-  function toggleTag(t: string) {
-    setActiveTags((a) => (a.includes(t) ? a.filter((x) => x !== t) : [...a, t]))
-  }
-
-  const usage = getUsage()
-  const totalTokens = usage.totalInput + usage.totalOutput
-  const costUsd = estimateCostUsd(usage.totalInput, usage.totalOutput)
+  const activeCount = statusF.length + moodF.length + genreF.length
+  const cats: { key: FilterCat; label: string; n: number }[] = [
+    { key: 'status', label: '연습 상태', n: statusF.length },
+    { key: 'mood', label: '분위기', n: moodF.length },
+    { key: 'genre', label: '장르', n: genreF.length },
+  ]
 
   return (
     <div className="list">
       <div className="app-header">
-        <div className="app-header__brand">CHRD.</div>
+        <div className="app-header__brand">CHRD<span className="app-header__brand-dot">.</span></div>
         <div className="app-header__actions">
-          <button className="btn btn--ghost btn--sm" onClick={onExport}>내보내기</button>
-          <label className="btn btn--ghost btn--sm">
-            가져오기
-            <input type="file" accept="application/json" hidden
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) onImport(f); e.target.value = '' }} />
-          </label>
-          <button className="btn btn--ghost btn--icon" title="설정" onClick={onSettings}>⚙</button>
+          <button className="btn btn--ghost btn--sm" onClick={onSettings}>설정</button>
         </div>
       </div>
 
       <h1>라이브러리</h1>
 
-      <button className="btn btn--primary btn--generate" onClick={onGenerate}>✨ AI로 악보 만들기</button>
-      {usage.totalCount > 0 && (
-        <div className="usage" title="유료 환산 추정치입니다. 무료 등급 실제 청구는 $0이며, 정확한 잔량은 Google AI Studio에서 확인하세요.">
-          누적 <b>{usage.totalCount}</b>곡 · {totalTokens.toLocaleString()} 토큰
-          <span className="usage__dim"> (입력 {usage.totalInput.toLocaleString()} / 출력 {usage.totalOutput.toLocaleString()})</span>
-          <span className="usage__sep">·</span>
-          유료 환산 ≈ ${costUsd.toFixed(costUsd < 0.01 ? 4 : 2)} (₩{Math.round(costUsd * USD_TO_KRW).toLocaleString()})
-          <span className="usage__free"> · 무료 $0</span>
-        </div>
-      )}
-
       <input className="search" placeholder="제목·아티스트·태그 검색"
         value={query} onChange={(e) => setQuery(e.target.value)} />
 
-      <div className="status-filter">
-        <button className={'status-pill' + (status === 'all' ? ' is-on' : '')} onClick={() => setStatus('all')}>
-          전체 <span className="status-pill__n">{songs.length}</span>
-        </button>
-        {PRACTICE_STATUSES.map((st) => (
-          <button key={st.value}
-            className={'status-pill status-pill--' + st.value + (status === st.value ? ' is-on' : '')}
-            onClick={() => setStatus((s) => (s === st.value ? 'all' : st.value))}>
-            <span className={'status-dot status-dot--' + st.value} />
-            {st.label} <span className="status-pill__n">{statusCounts[st.value] ?? 0}</span>
+      <div className="filter-cats">
+        {cats.map((c) => (
+          <button key={c.key}
+            className={'status-pill' + (openCat === c.key || c.n > 0 ? ' is-on' : '')}
+            onClick={() => setOpenCat((o) => (o === c.key ? null : c.key))}>
+            {c.label} {c.n > 0 && <span className="status-pill__n">{c.n}</span>}
           </button>
         ))}
+        {activeCount > 0 && (
+          <button className="tab tab--clear" onClick={() => { setStatusF([]); setMoodF([]); setGenreF([]) }}>초기화</button>
+        )}
       </div>
 
-      {allTags.length > 0 && (
-        <div className="tabs">
-          <button className={'tab' + (activeTags.length === 0 ? ' is-on' : '')} onClick={() => setActiveTags([])}>전체</button>
-          {allTags.map((t) => (
-            <button key={t} className={'tab' + (activeTags.includes(t) ? ' is-on' : '')} onClick={() => toggleTag(t)}>{t}</button>
+      {openCat === 'status' && (
+        <div className="filter-opts tag-select">
+          {PRACTICE_STATUSES.map((st) => (
+            <button key={st.value}
+              className={'chip chip--select' + (statusF.includes(st.value) ? ' is-on' : '')}
+              onClick={() => setStatusF((f) => toggleIn(f, st.value))}>
+              <span className={'status-dot status-dot--' + st.value} style={{ marginRight: 5 }} />
+              {st.label} <span className="status-pill__n">{statusCounts[st.value] ?? 0}</span>
+            </button>
           ))}
-          {activeTags.length > 0 && <button className="tab tab--clear" onClick={() => setActiveTags([])}>초기화</button>}
+        </div>
+      )}
+      {openCat === 'mood' && (
+        <div className="filter-opts tag-select">
+          {allMoods.length === 0 && <span className="muted" style={{ fontSize: '0.8rem' }}>분위기 태그가 있는 곡이 없습니다.</span>}
+          {allMoods.map((t) => (
+            <button key={t} className={'chip chip--select' + (moodF.includes(t) ? ' is-on' : '')}
+              onClick={() => setMoodF((f) => toggleIn(f, t))}>{t}</button>
+          ))}
+        </div>
+      )}
+      {openCat === 'genre' && (
+        <div className="filter-opts tag-select">
+          {allGenres.length === 0 && <span className="muted" style={{ fontSize: '0.8rem' }}>장르 태그가 있는 곡이 없습니다.</span>}
+          {allGenres.map((t) => (
+            <button key={t} className={'chip chip--select' + (genreF.includes(t) ? ' is-on' : '')}
+              onClick={() => setGenreF((f) => toggleIn(f, t))}>{t}</button>
+          ))}
         </div>
       )}
 
       <div className="rows">
         {filtered.map((s) => (
-          <button key={s.id} className="row" onClick={() => onOpen(s.id)}>
-            <div className={'row__dot status-dot--' + s.status} title={PRACTICE_STATUSES.find((x) => x.value === s.status)?.label} />
-            <div className="row__body">
-              <div className="row__title">{s.title}</div>
-              <div className="row__artist">{s.artist || '—'}</div>
-            </div>
-            <span className="row__meta">{s.originalKey}{s.tempo ? ` · ${s.tempo}` : ''}</span>
-            <svg className="row__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
+          <div key={s.id} className="row-wrap">
+            <button className="row" onClick={() => onOpen(s.id)}>
+              <div className={'row__dot status-dot--' + s.status} title={PRACTICE_STATUSES.find((x) => x.value === s.status)?.label} />
+              <div className="row__body">
+                <div className="row__title">{s.title}</div>
+                <div className="row__artist">{s.artist || '—'}</div>
+              </div>
+              <span className="row__meta">{s.originalKey}{s.tempo ? ` · ${s.tempo}` : ''}</span>
+              <svg className="row__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <button className="row__del" title="삭제" onClick={() => onDelete(s.id)}>×</button>
+          </div>
         ))}
         {filtered.length === 0 && <p className="empty">악보가 없습니다. 아래 + 버튼으로 시작하세요.</p>}
       </div>
 
-      <button className="fab" title="새 악보" onClick={onNew}>
-        <svg width="20" height="20" viewBox="0 0 24 24">
-          <path d="M12 5v14M5 12h14" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" />
-        </svg>
-      </button>
+      <div className="fab-group" onClick={(e) => e.stopPropagation()}>
+        {fabOpen && (
+          <div className="fab-actions">
+            <button className="fab-action fab-action--ai" onClick={() => { setFabOpen(false); onGenerate() }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3l1.9 5.8L20 10l-6.1 1.2L12 17l-1.9-5.8L4 10l6.1-1.2z" />
+              </svg>
+              AI로 만들기
+            </button>
+            <button className="fab-action fab-action--new" onClick={() => { setFabOpen(false); onNew() }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              직접 만들기
+            </button>
+          </div>
+        )}
+        <button className={'fab' + (fabOpen ? ' is-open' : '')} onClick={() => setFabOpen((o) => !o)}>
+          <svg width="20" height="20" viewBox="0 0 24 24" style={{ transition: 'transform 0.2s', transform: fabOpen ? 'rotate(45deg)' : 'none' }}>
+            <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
     </div>
   )
 }

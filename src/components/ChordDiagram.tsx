@@ -3,11 +3,12 @@ import { getDiagram, FRETS_ON_CHORD } from '../music/diagrams'
 interface Props {
   chord: string
   size?: number
+  positionIndex?: number
 }
 
 /** Small vertical guitar chord diagram (low-E string on the left). */
-export function ChordDiagram({ chord, size = 1 }: Props) {
-  const d = getDiagram(chord)
+export function ChordDiagram({ chord, size = 1, positionIndex = 0 }: Props) {
+  const d = getDiagram(chord, positionIndex)
   const W = 66 * size
   const H = 84 * size
 
@@ -23,17 +24,20 @@ export function ChordDiagram({ chord, size = 1 }: Props) {
   const pos = d.position
   const nStr = d.strings
   const nFret = FRETS_ON_CHORD
-  const padX = 8 * size
+  const baseFret = pos.baseFret
+  // baseFret > 1이면 왼쪽에 "Nfr" 라벨 공간 확보
+  const padLeft = (baseFret > 1 ? 22 : 8) * size
+  const padRight = 8 * size
   const padTop = 16 * size
-  const boardW = W - padX * 2
+  const boardW = W - padLeft - padRight
   const boardH = H - padTop - 10 * size
   const strGap = boardW / (nStr - 1)
   const fretGap = boardH / nFret
-  const baseFret = pos.baseFret
 
-  const strX = (i: number) => padX + i * strGap
+  const strX = (i: number) => padLeft + i * strGap
   const fretY = (row: number) => padTop + row * fretGap
 
+  // chords-db의 frets/barres 값은 baseFret 기준 상대값(1 = baseFret 위치)
   const dots = []
   for (let i = 0; i < nStr; i++) {
     const f = pos.frets[i]
@@ -47,7 +51,7 @@ export function ChordDiagram({ chord, size = 1 }: Props) {
         <circle key={'o' + i} cx={x} cy={padTop - 6 * size} r={3 * size} className="dg-open" />,
       )
     } else {
-      const row = f - baseFret + 0.5
+      const row = f - 0.5
       dots.push(
         <circle key={'d' + i} cx={x} cy={fretY(row)} r={5 * size} className="dg-dot" />,
       )
@@ -62,7 +66,7 @@ export function ChordDiagram({ chord, size = 1 }: Props) {
 
   // barres
   const barreEls = pos.barres.map((b, idx) => {
-    const row = b - baseFret + 0.5
+    const row = b - 0.5
     const idxs = pos.frets.map((f, i) => (f === b ? i : -1)).filter((i) => i >= 0)
     if (idxs.length < 2) return null
     const x1 = strX(Math.min(...idxs))
@@ -78,13 +82,13 @@ export function ChordDiagram({ chord, size = 1 }: Props) {
       <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
         {/* nut or base-fret marker */}
         {baseFret === 1 ? (
-          <line x1={padX} y1={padTop} x2={padX + boardW} y2={padTop} className="dg-nut" />
+          <line x1={padLeft} y1={padTop} x2={padLeft + boardW} y2={padTop} className="dg-nut" />
         ) : (
-          <text x={padX - 3 * size} y={fretY(0.55)} className="dg-basefret">{baseFret}fr</text>
+          <text x={padLeft - 4 * size} y={fretY(0.65)} className="dg-basefret">{baseFret}fr</text>
         )}
         {/* frets */}
         {Array.from({ length: nFret + 1 }, (_, r) => (
-          <line key={'fr' + r} x1={padX} y1={fretY(r)} x2={padX + boardW} y2={fretY(r)} className="dg-fret" />
+          <line key={'fr' + r} x1={padLeft} y1={fretY(r)} x2={padLeft + boardW} y2={fretY(r)} className="dg-fret" />
         ))}
         {/* strings */}
         {Array.from({ length: nStr }, (_, i) => (

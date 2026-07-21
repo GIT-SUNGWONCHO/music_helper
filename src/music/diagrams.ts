@@ -70,7 +70,8 @@ export interface DiagramResult {
   exact: boolean
 }
 
-export function getDiagram(token: string): DiagramResult | null {
+/** 코드 토큰의 모든 운지(positions)를 반환. */
+export function getPositions(token: string): { positions: ChordPosition[]; exact: boolean } | null {
   const parsed = parseChord(token)
   if (!parsed) return null
   const rootKey = dbRootKey(parsed.root)
@@ -82,15 +83,36 @@ export function getDiagram(token: string): DiagramResult | null {
   for (let i = 0; i < wanted.length; i++) {
     const entry = entries.find((e) => e.suffix === wanted[i])
     if (entry && entry.positions.length) {
-      return {
-        name: token,
-        position: entry.positions[0],
-        strings: GUITAR_STRINGS,
-        exact: i === 0,
-      }
+      return { positions: entry.positions, exact: i === 0 }
     }
   }
   return null
+}
+
+export function getDiagram(token: string, positionIndex = 0): DiagramResult | null {
+  const all = getPositions(token)
+  if (!all) return null
+  const idx = Math.min(Math.max(0, positionIndex), all.positions.length - 1)
+  return {
+    name: token,
+    position: all.positions[idx],
+    strings: GUITAR_STRINGS,
+    exact: all.exact,
+  }
+}
+
+/** 루트 음의 chords-db 보유 코드 종류(suffix) 목록. */
+export function suffixesForRoot(root: string): string[] {
+  const key = dbRootKey(root)
+  if (!key) return []
+  return (db.chords[key] ?? []).filter((e) => e.positions.length > 0).map((e) => e.suffix)
+}
+
+/** 루트 + db suffix → 표시용 코드명 (major는 생략, minor는 m). */
+export function displayChordName(root: string, suffix: string): string {
+  if (suffix === 'major') return root
+  if (suffix === 'minor') return root + 'm'
+  return root + suffix
 }
 
 /** A rough "is this hard for a beginner" heuristic to decide which chords to diagram by default. */

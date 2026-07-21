@@ -1,9 +1,56 @@
 import { useState } from 'react'
 import { loadSettings, saveSettings, MODEL_SUGGESTIONS, type AiSettings } from '../ai/settings'
 import { listGeminiModels } from '../ai/generate'
+import { getUsage, estimateCostUsd, USD_TO_KRW, GEN_TYPE_LABEL, type GenType } from '../ai/usage'
 
 interface Props {
   onClose: () => void
+}
+
+/** AI 사용량 요약 — 이 브라우저에서 성공한 생성만 집계(다른 사용자/기기는 각자 집계됨). */
+function UsagePanel() {
+  const u = getUsage()
+  if (u.totalCount === 0) return null
+  const totalTokens = u.totalInput + u.totalOutput
+  const totalCost = estimateCostUsd(u.totalInput, u.totalOutput)
+  const avgTokens = Math.round(totalTokens / u.totalCount)
+  const avgCost = totalCost / u.totalCount
+  const fmt = (usd: number) => `$${usd.toFixed(usd < 0.01 ? 4 : 2)} (₩${Math.round(usd * USD_TO_KRW).toLocaleString()})`
+  return (
+    <div className="usage-panel">
+      <div className="usage-panel__title">AI 사용량 (이 브라우저 기준)</div>
+      <table className="usage-table">
+        <tbody>
+          <tr><td>생성한 곡</td><td>{u.totalCount}곡 (이번 달 {u.monthCount}곡)</td></tr>
+          <tr><td>무료 한도</td><td>하루 1,500회 (요청 횟수 기준)</td></tr>
+          <tr><td>총 토큰</td><td>{totalTokens.toLocaleString()} (입력 {u.totalInput.toLocaleString()} / 출력·사고 {u.totalOutput.toLocaleString()})</td></tr>
+          <tr><td>곡당 평균</td><td>{avgTokens.toLocaleString()} 토큰 · {fmt(avgCost)}</td></tr>
+          <tr><td>유료 환산 누적</td><td>{fmt(totalCost)}</td></tr>
+        </tbody>
+      </table>
+
+      <div className="usage-panel__title" style={{ marginTop: 14 }}>유형별 사용</div>
+      <table className="usage-table">
+        <tbody>
+          {(Object.keys(GEN_TYPE_LABEL) as GenType[]).map((k) => {
+            const st = u.byType[k]
+            const tok = st.input + st.output
+            return (
+              <tr key={k}>
+                <td>{GEN_TYPE_LABEL[k]}</td>
+                <td>{st.count > 0
+                  ? `${st.count}곡 · ${tok.toLocaleString()} 토큰 · 곡당 ${Math.round(tok / st.count).toLocaleString()}`
+                  : '—'}</td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+      <p className="hint" style={{ padding: '4px 0 0' }}>
+        무료 한도는 <b>요청 횟수 기준(하루 1,500회)</b>이라 토큰 양은 거의 영향 없습니다. 유료 환산은 추정치이며 무료 키는 실제 청구 $0.
+      </p>
+    </div>
+  )
 }
 
 export function SettingsModal({ onClose }: Props) {
@@ -88,6 +135,8 @@ export function SettingsModal({ onClose }: Props) {
           <p className="hint" style={{ padding: '4px 0 0' }}>
             키 발급: <code>aistudio.google.com/apikey</code>. 키를 넣고 <b>모델 불러오기</b>를 누르면 이 키로 실제 쓸 수 있는 모델만 골라줍니다.
           </p>
+
+          <UsagePanel />
         </div>
 
         <div className="modal__foot">

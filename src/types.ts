@@ -41,6 +41,14 @@ export interface Song {
   genreTags: string[]
   /** 연습 상태 */
   status: PracticeStatus
+  /** 카포 프렛 (0 = 카포 없음) — 저장 코드는 사운딩 코드, 뷰에서 운지 코드로 변환 */
+  capoFret?: number
+  /** 코드명 → 선택한 운지 인덱스 (chords-db positions 배열 기준) */
+  fingerings?: Record<string, number>
+  /** 코드표 스트립에서 숨긴 코드명 목록 */
+  hiddenChords?: string[]
+  /** 사용자가 직접 추가한 코드표 코드명 목록 */
+  pinnedChords?: string[]
   sections: Section[]
   createdAt: number
   updatedAt: number
