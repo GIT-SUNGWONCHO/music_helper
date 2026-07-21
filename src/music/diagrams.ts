@@ -70,7 +70,22 @@ export interface DiagramResult {
   exact: boolean
 }
 
-/** 코드 토큰의 모든 운지(positions)를 반환. */
+// 표준 튜닝 개방현 음 (낮은 E부터), pitchClass 기준 (C=0)
+const OPEN_STRING_PC = [4, 9, 2, 7, 11, 4]
+
+/** 이 운지에서 실제로 울리는 가장 낮은 줄의 음(pitch class). 뮤트 줄은 건너뜀. */
+function bassPitchClassOf(position: ChordPosition): number | null {
+  for (let s = 0; s < position.frets.length; s++) {
+    const f = position.frets[s]
+    if (f === -1) continue
+    const absoluteFret = f === 0 ? 0 : position.baseFret + f - 1
+    const openPc = OPEN_STRING_PC[s] ?? OPEN_STRING_PC[OPEN_STRING_PC.length - 1]
+    return (openPc + absoluteFret) % 12
+  }
+  return null
+}
+
+/** 코드 토큰의 모든 운지(positions)를 반환. 슬래시 코드는 베이스 음이 실제로 최저음으로 울리는 운지를 우선함. */
 export function getPositions(token: string): { positions: ChordPosition[]; exact: boolean } | null {
   const parsed = parseChord(token)
   if (!parsed) return null
@@ -83,6 +98,15 @@ export function getPositions(token: string): { positions: ChordPosition[]; exact
   for (let i = 0; i < wanted.length; i++) {
     const entry = entries.find((e) => e.suffix === wanted[i])
     if (entry && entry.positions.length) {
+      if (parsed.bass) {
+        const targetPc = pitchClass(parsed.bass)
+        if (!Number.isNaN(targetPc)) {
+          const matching = entry.positions.filter((p) => bassPitchClassOf(p) === targetPc)
+          if (matching.length > 0) return { positions: matching, exact: i === 0 }
+        }
+        // chords-db에 이 베이스 음을 최저음으로 갖는 운지가 없음 — 일반 코드 모양으로 근사(≈ 표시)
+        return { positions: entry.positions, exact: false }
+      }
       return { positions: entry.positions, exact: i === 0 }
     }
   }
