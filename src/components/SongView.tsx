@@ -10,9 +10,11 @@ interface Props {
   song: Song
   onEdit: () => void
   onBack: () => void
+  onDuplicate: () => void
+  onDelete: (id: string) => void
 }
 
-export function SongView({ song, onEdit, onBack }: Props) {
+export function SongView({ song, onEdit, onBack, onDuplicate, onDelete }: Props) {
   const [semitones, setSemitones] = useState(0)
   const [capo, setCapo] = useState(song.capoFret ?? 0)
   const [scale, setScale] = useState(1)
@@ -31,6 +33,8 @@ export function SongView({ song, onEdit, onBack }: Props) {
           <strong>{song.title}</strong>
           {song.artist && <span className="muted"> · {song.artist}</span>}
         </div>
+        <button className="btn btn--ghost btn--sm btn--danger" onClick={() => onDelete(song.id)}>삭제</button>
+        <button className="btn btn--ghost btn--sm" onClick={onDuplicate}>복제</button>
         <button className="btn" onClick={onEdit}>편집</button>
       </div>
 
@@ -82,7 +86,7 @@ export function SongView({ song, onEdit, onBack }: Props) {
         </div>
       </div>
 
-      <ChordStrip sections={song.sections} semitones={fingeringOffset}
+      <ChordStrip sections={song.sections} semitones={fingeringOffset} rootKey={transposeNote(song.originalKey, fingeringOffset)}
         fingerings={song.fingerings} hiddenChords={song.hiddenChords} pinnedChords={song.pinnedChords} />
 
       <div style={{ fontSize: `${scale}rem` }}>

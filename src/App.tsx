@@ -90,6 +90,12 @@ export default function App() {
     setGeneratedSong(s)
     setScreen({ name: 'edit', id: s.id, isNew: true })
   }
+  function handleDuplicate(source: Song) {
+    const { id, createdAt, updatedAt, ...rest } = source
+    const copy = newSong({ ...rest, title: rest.title + ' (복제)' })
+    setGeneratedSong(copy)
+    setScreen({ name: 'edit', id: copy.id, isNew: true })
+  }
   async function handleGenerated({ song, ...meta }: GenerateResult) {
     setModal('none')
     setGenMeta(meta)
@@ -113,7 +119,8 @@ export default function App() {
           onSettings={() => setModal(settingsUnlocked ? 'settings' : 'pin')} />
       )}
       {screen.name === 'view' && song && (
-        <SongView song={song} onEdit={() => setScreen({ name: 'edit', id: song.id })} onBack={() => setScreen({ name: 'list' })} />
+        <SongView song={song} onEdit={() => setScreen({ name: 'edit', id: song.id })} onBack={() => setScreen({ name: 'list' })}
+          onDuplicate={() => handleDuplicate(song)} onDelete={handleDelete} />
       )}
       {screen.name === 'edit' && song && (
         <SongEditor song={song} genMeta={genMeta}

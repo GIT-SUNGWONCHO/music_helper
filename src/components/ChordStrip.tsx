@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react'
 import type { Section } from '../types'
 import { collectChords } from '../music/song'
-import { transposeChord, NOTE_NAMES } from '../music/chords'
+import { transposeChord, parseChord, NOTE_NAMES } from '../music/chords'
 import { isHardChord, getPositions, suffixesForRoot, displayChordName } from '../music/diagrams'
 import { ChordDiagram } from './ChordDiagram'
 
 interface Props {
   sections: Section[]
   semitones?: number
+  /** 곡의 으뜸음(현재 표시 기준, 전조/카포 반영된 값) — 난이도와 무관하게 항상 코드표에 포함 */
+  rootKey?: string
   fingerings?: Record<string, number>
   hiddenChords?: string[]
   pinnedChords?: string[]
@@ -20,9 +22,9 @@ interface Props {
   }) => void
 }
 
-/** 곡에 쓰인 어려운 코드 + 직접 추가한 코드의 운지표 스트립. */
+/** 곡에 쓰인 어려운 코드 + 으뜸음 코드 + 직접 추가한 코드의 운지표 스트립. */
 export function ChordStrip({
-  sections, semitones = 0, fingerings, hiddenChords, pinnedChords, editable, onChange,
+  sections, semitones = 0, rootKey, fingerings, hiddenChords, pinnedChords, editable, onChange,
 }: Props) {
   const [openChord, setOpenChord] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
@@ -32,7 +34,18 @@ export function ChordStrip({
   const pinned = pinnedChords ?? []
 
   const chords = useMemo(() => {
-    const auto = collectChords(sections, semitones).filter(isHardChord)
+    const all = collectChords(sections, semitones)
+    const hardSet = new Set(all.filter(isHardChord))
+    // 슬래시 코드가 코드표에 나오면, 그 기준(베이스 없는) 코드도 곡에 실제로 쓰였을 때만 같이 보여줌
+    for (const c of hardSet) {
+      const parsed = parseChord(c)
+      if (!parsed?.bass) continue
+      const base = parsed.root + parsed.quality
+      if (all.includes(base)) hardSet.add(base)
+    }
+    // 곡의 으뜸음 코드는 난이도와 무관하게 항상 포함(실제로 쓰였을 때만)
+    if (rootKey && all.includes(rootKey)) hardSet.add(rootKey)
+    const auto = all.filter((c) => hardSet.has(c))
     const merged = [...auto]
     for (const p of pinned) {
       const t = transposeChord(p, semitones)

@@ -89,7 +89,7 @@ export function SongList({ songs, owner, onSwitchOwner, onOpen, onDelete, onNew,
                 <div className="row__title">{s.title}</div>
                 <div className="row__artist">{s.artist || '—'}</div>
               </div>
-              <span className="row__meta">{s.originalKey}{s.tempo ? ` · ${s.tempo}` : ''}</span>
+              <span className="row__meta">{s.originalKey}</span>
               <svg className="row__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none">
                 <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>

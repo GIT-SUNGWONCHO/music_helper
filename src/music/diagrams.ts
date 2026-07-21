@@ -73,6 +73,14 @@ export interface DiagramResult {
 // 표준 튜닝 개방현 음 (낮은 E부터), pitchClass 기준 (C=0)
 const OPEN_STRING_PC = [4, 9, 2, 7, 11, 4]
 
+// chords-db에 없는 운지(주로 오픈 포지션 워킹 베이스)를 코드명 그대로 보정. 특정 곡이 아니라
+// 이 정확한 코드명이 나오면 항상 적용되는 일반 데이터 — 전조된 코드명에는 적용 안 됨(오픈 셰이프라 이조 시 물리적으로 안 맞음).
+const EXTRA_POSITIONS: Record<string, ChordPosition> = {
+  'Asus2/G': { frets: [3, 0, 2, 2, 0, 0], fingers: [4, 0, 1, 2, 0, 0], baseFret: 1, barres: [] },
+  'Asus2/F#': { frets: [2, 0, 2, 2, 0, 0], fingers: [4, 0, 1, 2, 0, 0], baseFret: 1, barres: [] },
+  'Asus2/E': { frets: [0, 0, 2, 2, 0, 0], fingers: [0, 0, 1, 2, 0, 0], baseFret: 1, barres: [] },
+}
+
 /** 이 운지에서 실제로 울리는 가장 낮은 줄의 음(pitch class). 뮤트 줄은 건너뜀. */
 function bassPitchClassOf(position: ChordPosition): number | null {
   for (let s = 0; s < position.frets.length; s++) {
@@ -104,6 +112,8 @@ export function getPositions(token: string): { positions: ChordPosition[]; exact
           const matching = entry.positions.filter((p) => bassPitchClassOf(p) === targetPc)
           if (matching.length > 0) return { positions: matching, exact: i === 0 }
         }
+        const extra = EXTRA_POSITIONS[token]
+        if (extra) return { positions: [extra, ...entry.positions], exact: true }
         // chords-db에 이 베이스 음을 최저음으로 갖는 운지가 없음 — 일반 코드 모양으로 근사(≈ 표시)
         return { positions: entry.positions, exact: false }
       }
@@ -163,3 +173,4 @@ export function isHardChord(token: string): boolean {
   if (pos && (pos.position.barres.length > 0 || pos.position.baseFret > 1)) return true
   return false
 }
+

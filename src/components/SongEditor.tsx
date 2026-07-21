@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, Fragment } from 'react'
 import type { Song, Section, Bar } from '../types'
 import { PRACTICE_STATUSES } from '../types'
 import type { GenerateResult } from '../ai/generate'
@@ -17,6 +17,9 @@ interface Props {
 }
 
 const CONFIDENCE_LABEL: Record<string, string> = { high: '높음', medium: '중간', low: '낮음' }
+const ROW_SIZE = 4
+
+interface RowRef { secIdx: number; start: number; len: number }
 
 /** AI 생성 직후 — 무엇을 근거로 만들었고 얼마나 믿을 수 있는지 안내. */
 function GenNotice({ meta }: { meta: GenMeta }) {
@@ -86,6 +89,7 @@ function ChordTagInput({ chords, onChange }: { chords: string[]; onChange: (c: s
 
 export function SongEditor({ song, genMeta, onSave, onCancel, onDelete }: Props) {
   const [draft, setDraft] = useState<Song>(() => structuredClone(song))
+  const [relabeling, setRelabeling] = useState(false)
 
   function set<K extends keyof Song>(key: K, value: Song[K]) {
     setDraft((d) => ({ ...d, [key]: value }))
@@ -113,7 +117,7 @@ export function SongEditor({ song, genMeta, onSave, onCancel, onDelete }: Props)
       sections: d.sections.map((s) => (s.id === secId ? { ...s, bars: s.bars.filter((b) => b.id !== barId) } : s)),
     }))
   }
-  /** 전체 곡을 ±1반음 전조(모든 코드 이동 + 키 라벨 갱신). 저장된 운지는 코드명이 바뀌므로 초기화. */
+  /** 전체 곡을 ±1반음 전조(모든 코드 이동 + 키 라벨 갱신). 코드명이 바뀌므로 핀 고정/숨김 목록도 같이 전조하고, 운지 선택은 초기화. */
   function transposeBy(semis: 1 | -1) {
     setDraft((d) => ({
       ...d,
@@ -122,6 +126,8 @@ export function SongEditor({ song, genMeta, onSave, onCancel, onDelete }: Props)
         ...s,
         bars: s.bars.map((b) => ({ ...b, chords: b.chords.map((c) => transposeChord(c, semis)) })),
       })),
+      pinnedChords: (d.pinnedChords ?? []).map((c) => transposeChord(c, semis)),
+      hiddenChords: (d.hiddenChords ?? []).map((c) => transposeChord(c, semis)),
       fingerings: {},
     }))
   }
@@ -139,6 +145,43 @@ export function SongEditor({ song, genMeta, onSave, onCancel, onDelete }: Props)
       const arr = d.sections.slice()
       ;[arr[i], arr[j]] = [arr[j], arr[i]]
       return { ...d, sections: arr }
+    })
+  }
+  /** 이 4마디 줄을 바로 뒤에 복제(코드/가사 복사, 새 id 발급). */
+  function duplicateRow(row: RowRef) {
+    setDraft((d) => {
+      const sections = d.sections.map((s) => ({ ...s, bars: s.bars.slice() }))
+      const sec = sections[row.secIdx]
+      const copy = sec.bars.slice(row.start, row.start + row.len).map((b) => newBar([...b.chords], b.lyric))
+      sec.bars.splice(row.start + row.len, 0, ...copy)
+      return { ...d, sections }
+    })
+  }
+  /** 이 4마디 줄을 같은 섹션 내 앞/뒤 줄과 통째로 자리 바꿈. 섹션 경계면 인접 섹션으로 넘어감. */
+  function moveRow(row: RowRef, dir: -1 | 1) {
+    setDraft((d) => {
+      const sections = d.sections.map((s) => ({ ...s, bars: s.bars.slice() }))
+      const sec = sections[row.secIdx]
+      const chunk = sec.bars.splice(row.start, row.len)
+      if (dir === -1) {
+        if (row.start > 0) {
+          sec.bars.splice(Math.max(0, row.start - ROW_SIZE), 0, ...chunk)
+        } else if (row.secIdx > 0) {
+          sections[row.secIdx - 1].bars.push(...chunk)
+        } else {
+          sec.bars.splice(row.start, 0, ...chunk)
+        }
+      } else {
+        if (row.start < sec.bars.length) {
+          const nextLen = Math.min(ROW_SIZE, sec.bars.length - row.start)
+          sec.bars.splice(row.start + nextLen, 0, ...chunk)
+        } else if (row.secIdx < sections.length - 1) {
+          sections[row.secIdx + 1].bars.unshift(...chunk)
+        } else {
+          sec.bars.splice(row.start, 0, ...chunk)
+        }
+      }
+      return { ...d, sections }
     })
   }
 
@@ -161,14 +204,20 @@ export function SongEditor({ song, genMeta, onSave, onCancel, onDelete }: Props)
             <input value={draft.artist} onChange={(e) => set('artist', e.target.value)} />
           </label>
           <div className="field">
-            <span>키 / 전조</span>
+            <span>키 (전조)</span>
             <div className="key-ctrl">
-              <button type="button" className="btn btn--icon" title="반음 내려 전조 (코드 이동)" onClick={() => transposeBy(-1)}>−</button>
-              <select value={draft.originalKey} title="키 라벨 직접 지정 (코드는 안 바뀜)"
-                onChange={(e) => set('originalKey', e.target.value)}>
-                {NOTE_NAMES.map((n) => <option key={n} value={n}>{n}</option>)}
-              </select>
-              <button type="button" className="btn btn--icon" title="반음 올려 전조 (코드 이동)" onClick={() => transposeBy(1)}>+</button>
+              <button type="button" className="btn btn--icon" onClick={() => transposeBy(-1)}>−</button>
+              {relabeling ? (
+                <select autoFocus className="key-ctrl__select" value={draft.originalKey}
+                  onBlur={() => setRelabeling(false)}
+                  onChange={(e) => { set('originalKey', e.target.value); setRelabeling(false) }}>
+                  {NOTE_NAMES.map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              ) : (
+                <button type="button" className="key-ctrl__value" title="이름만 바꾸기(코드는 그대로)"
+                  onClick={() => setRelabeling(true)}>{draft.originalKey}</button>
+              )}
+              <button type="button" className="btn btn--icon" onClick={() => transposeBy(1)}>+</button>
             </div>
           </div>
           <label className="field">
@@ -202,7 +251,7 @@ export function SongEditor({ song, genMeta, onSave, onCancel, onDelete }: Props)
       </div>
 
       {genMeta && <GenNotice meta={genMeta} />}
-      <ChordStrip sections={draft.sections} editable
+      <ChordStrip sections={draft.sections} rootKey={draft.originalKey} editable
         fingerings={draft.fingerings} hiddenChords={draft.hiddenChords} pinnedChords={draft.pinnedChords}
         onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))} />
 
@@ -220,21 +269,42 @@ export function SongEditor({ song, genMeta, onSave, onCancel, onDelete }: Props)
               <button className="btn btn--icon btn--danger" title="섹션 삭제" onClick={() => removeSection(sec.id)}>✕</button>
             </div>
             <div className="bars">
-              {sec.bars.map((bar) => (
-                <div className="bar bar--edit" key={bar.id}>
-                  <button className="bar__x" title="마디 삭제" onClick={() => removeBar(sec.id, bar.id)}>×</button>
-                  <ChordTagInput
-                    chords={bar.chords}
-                    onChange={(c) => patchBar(sec.id, bar.id, { chords: c })}
-                  />
-                  <input
-                    className="bar__lyric-input"
-                    value={bar.lyric}
-                    placeholder="가사"
-                    onChange={(e) => patchBar(sec.id, bar.id, { lyric: e.target.value })}
-                  />
-                </div>
-              ))}
+              {sec.bars.map((bar, bi) => {
+                const rowStart = Math.floor(bi / ROW_SIZE) * ROW_SIZE
+                const isRowEnd = (bi + 1) % ROW_SIZE === 0 || bi === sec.bars.length - 1
+                const row: RowRef = { secIdx: si, start: rowStart, len: bi - rowStart + 1 }
+                const canUp = !(si === 0 && rowStart === 0)
+                const canDown = !(si === draft.sections.length - 1 && bi === sec.bars.length - 1)
+                return (
+                  <Fragment key={bar.id}>
+                    <div className="bar bar--edit">
+                      <button className="bar__x" title="마디 삭제" onClick={() => removeBar(sec.id, bar.id)}>×</button>
+                      <ChordTagInput
+                        chords={bar.chords}
+                        onChange={(c) => patchBar(sec.id, bar.id, { chords: c })}
+                      />
+                      <input
+                        className="bar__lyric-input"
+                        value={bar.lyric}
+                        placeholder="가사"
+                        onChange={(e) => patchBar(sec.id, bar.id, { lyric: e.target.value })}
+                      />
+                    </div>
+                    {isRowEnd && (
+                      <div className="bar-row-ops">
+                        <button className="btn btn--icon" title="이 4마디 줄 복제" onClick={() => duplicateRow(row)}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="9" y="9" width="11" height="11" rx="1.5" />
+                            <path d="M5 15V5.5A1.5 1.5 0 0 1 6.5 4H15" />
+                          </svg>
+                        </button>
+                        <button className="btn btn--icon" title="줄 위로 (섹션 경계 넘어감)" disabled={!canUp} onClick={() => moveRow(row, -1)}>↑</button>
+                        <button className="btn btn--icon" title="줄 아래로 (섹션 경계 넘어감)" disabled={!canDown} onClick={() => moveRow(row, 1)}>↓</button>
+                      </div>
+                    )}
+                  </Fragment>
+                )
+              })}
               <button className="bar bar--add" onClick={() => addBar(sec.id)}>+ 마디</button>
             </div>
           </section>
@@ -246,7 +316,7 @@ export function SongEditor({ song, genMeta, onSave, onCancel, onDelete }: Props)
       </div>
 
       <div className="editor__footer">
-        <button className="btn btn--danger" onClick={() => onDelete(draft.id)}>이 곡 삭제</button>
+        <button className="btn btn--ghost btn--sm btn--danger" onClick={() => onDelete(draft.id)}>이 곡 삭제</button>
       </div>
     </div>
   )
