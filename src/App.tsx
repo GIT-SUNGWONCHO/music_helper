@@ -1,45 +1,75 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import type { Song } from './types'
 import type { GenerateResult } from './ai/generate'
-import { db, allSongs, saveSong, deleteSong, newSong, exportJson, importJson } from './db'
+import { allSongs, saveSong, deleteSong, newSong, countSongs, bulkSaveSongs } from './db'
+import { supabaseReady, loadOwner, saveOwner, type Owner } from './supabase'
 import { seedSongs } from './seed'
 import { SongList } from './components/SongList'
 import { SongView } from './components/SongView'
 import { SongEditor } from './components/SongEditor'
 import { SettingsModal } from './components/SettingsModal'
 import { GenerateModal } from './components/GenerateModal'
+import { PinPrompt } from './components/PinPrompt'
 
-type Modal = 'none' | 'generate' | 'settings'
+type Modal = 'none' | 'generate' | 'settings' | 'pin'
+
+const SETTINGS_UNLOCKED_KEY = 'mh.settings.unlocked'
 
 type Screen = { name: 'list' } | { name: 'view'; id: string } | { name: 'edit'; id: string; isNew?: boolean }
 
+function SupabaseSetupNotice() {
+  return (
+    <div className="loading" style={{ flexDirection: 'column', gap: 10, textAlign: 'center', padding: 20 }}>
+      <div>Supabase 설정이 필요합니다.</div>
+      <div className="hint" style={{ padding: 0 }}>
+        프로젝트 루트에 <code>.env.local</code> 파일을 만들고<br />
+        <code>VITE_SUPABASE_URL</code>, <code>VITE_SUPABASE_ANON_KEY</code>를 채운 뒤 서버를 다시 시작하세요.
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
+  const [owner, setOwner] = useState<Owner>(() => loadOwner())
   const [songs, setSongs] = useState<Song[]>([])
   const [screen, setScreen] = useState<Screen>({ name: 'list' })
   const [ready, setReady] = useState(false)
   const [modal, setModal] = useState<Modal>('none')
   const [genMeta, setGenMeta] = useState<Omit<GenerateResult, 'song'> | null>(null)
   const [generatedSong, setGeneratedSong] = useState<Song | null>(null)
+  const [settingsUnlocked, setSettingsUnlocked] = useState(() => localStorage.getItem(SETTINGS_UNLOCKED_KEY) === '1')
 
-  const refresh = useCallback(async () => setSongs(await allSongs()), [])
-  const initialized = useRef(false)
+  const refresh = useCallback(async (o: Owner) => setSongs(await allSongs(o)), [])
+  const seedChecked = useRef<Set<Owner>>(new Set())
 
   useEffect(() => {
-    if (initialized.current) return
-    initialized.current = true
+    if (!supabaseReady) { setReady(true); return }
+    let cancelled = false
     ;(async () => {
-      const count = await db.songs.count()
-      if (count === 0) await db.songs.bulkPut(seedSongs())
-      await refresh()
+      setReady(false)
+      if (!seedChecked.current.has(owner)) {
+        seedChecked.current.add(owner)
+        const count = await countSongs(owner)
+        if (count === 0) await bulkSaveSongs(seedSongs(), owner)
+      }
+      if (cancelled) return
+      await refresh(owner)
       setReady(true)
     })()
-  }, [refresh])
+    return () => { cancelled = true }
+  }, [owner, refresh])
+
+  function switchOwner(o: Owner) {
+    saveOwner(o)
+    setOwner(o)
+    setScreen({ name: 'list' })
+  }
 
   const current = (id: string) => songs.find((s) => s.id === id) ?? (generatedSong?.id === id ? generatedSong : undefined)
 
   async function handleSave(song: Song) {
-    await saveSong(song)
-    await refresh()
+    await saveSong(song, owner)
+    await refresh(owner)
     setGeneratedSong(null)
     setGenMeta(null)
     setScreen({ name: 'view', id: song.id })
@@ -52,7 +82,7 @@ export default function App() {
       return
     }
     await deleteSong(id)
-    await refresh()
+    await refresh(owner)
     setScreen({ name: 'list' })
   }
   function handleNew() {
@@ -66,25 +96,7 @@ export default function App() {
     setGeneratedSong(song)
     setScreen({ name: 'edit', id: song.id, isNew: true })
   }
-  async function handleExport() {
-    const text = await exportJson()
-    const blob = new Blob([text], { type: 'application/json' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = `music-helper-${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
-    URL.revokeObjectURL(a.href)
-  }
-  async function handleImport(file: File) {
-    try {
-      const n = await importJson(await file.text())
-      await refresh()
-      alert(`${n}곡을 가져왔습니다.`)
-    } catch (e) {
-      alert('가져오기 실패: ' + (e as Error).message)
-    }
-  }
-
+  if (!supabaseReady) return <SupabaseSetupNotice />
   if (!ready) return <div className="loading">불러오는 중…</div>
 
   const song = screen.name === 'list' ? undefined : current(screen.id)
@@ -96,9 +108,9 @@ export default function App() {
   return (
     <>
       {screen.name === 'list' && (
-        <SongList songs={songs} onOpen={(id) => setScreen({ name: 'view', id })}
+        <SongList songs={songs} owner={owner} onSwitchOwner={switchOwner} onOpen={(id) => setScreen({ name: 'view', id })}
           onDelete={handleDelete} onNew={handleNew} onGenerate={() => setModal('generate')}
-          onSettings={() => setModal('settings')} />
+          onSettings={() => setModal(settingsUnlocked ? 'settings' : 'pin')} />
       )}
       {screen.name === 'view' && song && (
         <SongView song={song} onEdit={() => setScreen({ name: 'edit', id: song.id })} onBack={() => setScreen({ name: 'list' })} />
@@ -114,11 +126,21 @@ export default function App() {
           onDelete={handleDelete} />
       )}
 
-      {modal === 'settings' && (
-        <SettingsModal onClose={() => setModal('none')} onExport={handleExport} onImport={handleImport} />
+      {modal === 'pin' && (
+        <PinPrompt
+          onClose={() => setModal('none')}
+          onSuccess={() => {
+            localStorage.setItem(SETTINGS_UNLOCKED_KEY, '1')
+            setSettingsUnlocked(true)
+            setModal('settings')
+          }}
+        />
       )}
+      {modal === 'settings' && <SettingsModal onClose={() => setModal('none')} />}
       {modal === 'generate' && (
-        <GenerateModal onClose={() => setModal('none')} onOpenSettings={() => setModal('settings')} onGenerated={handleGenerated} />
+        <GenerateModal onClose={() => setModal('none')}
+          onOpenSettings={() => setModal(settingsUnlocked ? 'settings' : 'pin')}
+          onGenerated={handleGenerated} />
       )}
     </>
   )

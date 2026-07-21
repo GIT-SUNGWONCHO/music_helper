@@ -101,13 +101,13 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
           )}
           <label className="field">
             <span>곡 제목</span>
-            <input value={title} autoFocus placeholder="예: 입춘"
+            <input value={title} autoFocus placeholder="예: Creep"
               onChange={(e) => setTitle(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && keyReady && !loading) run() }} />
           </label>
           <label className="field">
             <span>아티스트</span>
-            <input value={artist} placeholder="예: 한로로"
+            <input value={artist} placeholder="예: Radiohead"
               onChange={(e) => setArtist(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && keyReady && !loading) run() }} />
           </label>

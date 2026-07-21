@@ -18,7 +18,7 @@ export interface Section {
 export type PracticeStatus = 'want' | 'practicing' | 'done'
 
 export const PRACTICE_STATUSES: { value: PracticeStatus; label: string }[] = [
-  { value: 'want', label: '하고싶음' },
+  { value: 'want', label: '연습대기' },
   { value: 'practicing', label: '연습중' },
   { value: 'done', label: '완료' },
 ]

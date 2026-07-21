@@ -9,9 +9,13 @@ export interface AiSettings {
 
 const STORAGE_KEY = 'mh.ai.settings.v1'
 
+// 결제 미연결 무료 키 — 공개 배포 번들에 노출돼도 재발급으로 대응 가능한 수준의 위험만 짐.
+// 설정에서 각자 자기 키를 입력하면 그 키가 우선 사용됨(아래 loadSettings 참고).
+const SHARED_API_KEY = (import.meta.env.VITE_GEMINI_API_KEY as string | undefined) ?? ''
+
 export const DEFAULT_SETTINGS: AiSettings = {
   provider: 'gemini',
-  apiKey: '',
+  apiKey: SHARED_API_KEY,
   // '-latest' 별칭: 신규 키는 구버전(2.5 등) 사용 불가라 별칭이 안전. 2.5는 기존 키에서만 동작.
   model: 'gemini-flash-latest',
 }
@@ -24,7 +28,10 @@ export const MODEL_SUGGESTIONS: Record<Provider, string[]> = {
 export function loadSettings(): AiSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : { ...DEFAULT_SETTINGS }
+    const merged = raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : { ...DEFAULT_SETTINGS }
+    // 직접 입력한 키가 없으면 공유 기본 키로 대체(빈 문자열로 저장돼 있던 과거 설정 포함)
+    if (!merged.apiKey.trim()) merged.apiKey = SHARED_API_KEY
+    return merged
   } catch {
     return { ...DEFAULT_SETTINGS }
   }

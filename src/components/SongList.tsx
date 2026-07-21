@@ -1,9 +1,12 @@
 import { useMemo, useState, useEffect } from 'react'
 import type { Song, PracticeStatus } from '../types'
 import { PRACTICE_STATUSES } from '../types'
+import { OWNERS, type Owner } from '../supabase'
 
 interface Props {
   songs: Song[]
+  owner: Owner
+  onSwitchOwner: (o: Owner) => void
   onOpen: (id: string) => void
   onDelete: (id: string) => void
   onNew: () => void
@@ -11,24 +14,13 @@ interface Props {
   onSettings: () => void
 }
 
-type FilterCat = 'status' | 'mood' | 'genre'
-
-function distinctTags(songs: Song[], pick: (s: Song) => string[]): string[] {
-  const counts = new Map<string, number>()
-  for (const s of songs) for (const t of pick(s)) counts.set(t, (counts.get(t) ?? 0) + 1)
-  return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([t]) => t)
-}
-
 function toggleIn<T>(arr: T[], v: T): T[] {
   return arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]
 }
 
-export function SongList({ songs, onOpen, onDelete, onNew, onGenerate, onSettings }: Props) {
+export function SongList({ songs, owner, onSwitchOwner, onOpen, onDelete, onNew, onGenerate, onSettings }: Props) {
   const [query, setQuery] = useState('')
   const [statusF, setStatusF] = useState<PracticeStatus[]>([])
-  const [moodF, setMoodF] = useState<string[]>([])
-  const [genreF, setGenreF] = useState<string[]>([])
-  const [openCat, setOpenCat] = useState<FilterCat | null>(null)
   const [fabOpen, setFabOpen] = useState(false)
 
   useEffect(() => {
@@ -38,8 +30,6 @@ export function SongList({ songs, onOpen, onDelete, onNew, onGenerate, onSetting
     return () => document.removeEventListener('click', close)
   }, [fabOpen])
 
-  const allMoods = useMemo(() => distinctTags(songs, (s) => s.moodTags), [songs])
-  const allGenres = useMemo(() => distinctTags(songs, (s) => s.genreTags), [songs])
   const statusCounts = useMemo(() => {
     const m: Record<string, number> = {}
     for (const s of songs) m[s.status] = (m[s.status] ?? 0) + 1
@@ -50,82 +40,45 @@ export function SongList({ songs, onOpen, onDelete, onNew, onGenerate, onSetting
     const q = query.trim().toLowerCase()
     return songs.filter((s) => {
       if (statusF.length && !statusF.includes(s.status)) return false
-      if (moodF.length && !moodF.some((t) => s.moodTags.includes(t))) return false
-      if (genreF.length && !genreF.some((t) => s.genreTags.includes(t))) return false
       if (!q) return true
-      const tags = [...s.genreTags, ...s.moodTags]
-      return (
-        s.title.toLowerCase().includes(q) ||
-        s.artist.toLowerCase().includes(q) ||
-        tags.some((t) => t.toLowerCase().includes(q))
-      )
+      return s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q)
     })
-  }, [songs, query, statusF, moodF, genreF])
-
-  const activeCount = statusF.length + moodF.length + genreF.length
-  const cats: { key: FilterCat; label: string; n: number }[] = [
-    { key: 'status', label: '연습 상태', n: statusF.length },
-    { key: 'mood', label: '분위기', n: moodF.length },
-    { key: 'genre', label: '장르', n: genreF.length },
-  ]
+  }, [songs, query, statusF])
 
   return (
     <div className="list">
       <div className="app-header">
-        <div className="app-header__brand">CHRD<span className="app-header__brand-dot">.</span></div>
+        <div className="app-header__brand">GENCHRD<span className="app-header__brand-dot">.</span></div>
         <div className="app-header__actions">
+          <div className="seg">
+            {OWNERS.map((o) => (
+              <button key={o.value} type="button"
+                className={'seg__btn' + (owner === o.value ? ' is-on' : '')}
+                onClick={() => onSwitchOwner(o.value)}>{o.label}</button>
+            ))}
+          </div>
           <button className="btn btn--ghost btn--sm" onClick={onSettings}>설정</button>
         </div>
       </div>
 
       <h1>라이브러리</h1>
 
-      <input className="search" placeholder="제목·아티스트·태그 검색"
+      <input className="search" placeholder="제목·아티스트 검색"
         value={query} onChange={(e) => setQuery(e.target.value)} />
 
-      <div className="filter-cats">
-        {cats.map((c) => (
-          <button key={c.key}
-            className={'status-pill' + (openCat === c.key || c.n > 0 ? ' is-on' : '')}
-            onClick={() => setOpenCat((o) => (o === c.key ? null : c.key))}>
-            {c.label} {c.n > 0 && <span className="status-pill__n">{c.n}</span>}
+      <div className="status-filter">
+        <button className={'status-pill' + (statusF.length === 0 ? ' is-on' : '')} onClick={() => setStatusF([])}>
+          전체 <span className="status-pill__n">{songs.length}</span>
+        </button>
+        {PRACTICE_STATUSES.map((st) => (
+          <button key={st.value}
+            className={'status-pill' + (statusF.includes(st.value) ? ' is-on' : '')}
+            onClick={() => setStatusF((f) => toggleIn(f, st.value))}>
+            <span className={'status-dot status-dot--' + st.value} />
+            {st.label} <span className="status-pill__n">{statusCounts[st.value] ?? 0}</span>
           </button>
         ))}
-        {activeCount > 0 && (
-          <button className="tab tab--clear" onClick={() => { setStatusF([]); setMoodF([]); setGenreF([]) }}>초기화</button>
-        )}
       </div>
-
-      {openCat === 'status' && (
-        <div className="filter-opts tag-select">
-          {PRACTICE_STATUSES.map((st) => (
-            <button key={st.value}
-              className={'chip chip--select' + (statusF.includes(st.value) ? ' is-on' : '')}
-              onClick={() => setStatusF((f) => toggleIn(f, st.value))}>
-              <span className={'status-dot status-dot--' + st.value} style={{ marginRight: 5 }} />
-              {st.label} <span className="status-pill__n">{statusCounts[st.value] ?? 0}</span>
-            </button>
-          ))}
-        </div>
-      )}
-      {openCat === 'mood' && (
-        <div className="filter-opts tag-select">
-          {allMoods.length === 0 && <span className="muted" style={{ fontSize: '0.8rem' }}>분위기 태그가 있는 곡이 없습니다.</span>}
-          {allMoods.map((t) => (
-            <button key={t} className={'chip chip--select' + (moodF.includes(t) ? ' is-on' : '')}
-              onClick={() => setMoodF((f) => toggleIn(f, t))}>{t}</button>
-          ))}
-        </div>
-      )}
-      {openCat === 'genre' && (
-        <div className="filter-opts tag-select">
-          {allGenres.length === 0 && <span className="muted" style={{ fontSize: '0.8rem' }}>장르 태그가 있는 곡이 없습니다.</span>}
-          {allGenres.map((t) => (
-            <button key={t} className={'chip chip--select' + (genreF.includes(t) ? ' is-on' : '')}
-              onClick={() => setGenreF((f) => toggleIn(f, t))}>{t}</button>
-          ))}
-        </div>
-      )}
 
       <div className="rows">
         {filtered.map((s) => (

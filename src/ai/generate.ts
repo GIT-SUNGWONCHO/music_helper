@@ -3,7 +3,6 @@ import { newSong, newSection, newBar } from '../db'
 import { NOTE_NAMES, pitchClass } from '../music/chords'
 import type { AiSettings } from './settings'
 import { recordUsage, type GenType } from './usage'
-import { GENRE_TAGS, MOOD_TAGS } from '../tags'
 
 export type Difficulty = 'simple' | 'original' | 'rich'
 
@@ -86,8 +85,6 @@ Rules:
 - Keep lyrics segmented so each fragment lines up under the bar where it is sung.
 - "originalKey": the key the chords are written in, one of C C# D Eb E F F# G Ab A Bb B.
 - "tempo": BPM integer ONLY if you are confident of the real tempo. If unsure, OMIT the field entirely — never guess a BPM.
-- "genreTags": 1-3 tags chosen ONLY from this list: ${GENRE_TAGS.join(', ')}.
-- "moodTags": 1-3 tags chosen ONLY from this list: ${MOOD_TAGS.join(', ')}.
 
 Output ONLY a single JSON object, no markdown, no commentary, in exactly this shape:
 {
@@ -97,8 +94,6 @@ Output ONLY a single JSON object, no markdown, no commentary, in exactly this sh
   "tempo": 92,
   "confidence": "high",
   "basis": "무엇을 근거로 만들었는지 한 문장",
-  "genreTags": ["..."],
-  "moodTags": ["..."],
   "sections": [
     { "label": "Verse", "bars": [
       { "chords": ["Dsus4"], "lyric": "가사 조각" },

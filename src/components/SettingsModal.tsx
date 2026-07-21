@@ -5,8 +5,6 @@ import { getUsage, estimateCostUsd, USD_TO_KRW, GEN_TYPE_LABEL, type GenType } f
 
 interface Props {
   onClose: () => void
-  onExport: () => void
-  onImport: (file: File) => void
 }
 
 /** AI 사용량 요약 — 이 브라우저에서 성공한 생성만 집계(다른 사용자/기기는 각자 집계됨). */
@@ -55,7 +53,7 @@ function UsagePanel() {
   )
 }
 
-export function SettingsModal({ onClose, onExport, onImport }: Props) {
+export function SettingsModal({ onClose }: Props) {
   const [s, setS] = useState<AiSettings>(() => loadSettings())
   const [show, setShow] = useState(false)
   const [models, setModels] = useState<string[]>([])
@@ -105,7 +103,7 @@ export function SettingsModal({ onClose, onExport, onImport }: Props) {
           </label>
 
           <label className="field">
-            <span>API 키 (이 브라우저에만 저장됨)</span>
+            <span>API 키 (비워두면 공용 키 사용, 채우면 이 브라우저는 그 키 사용)</span>
             <div className="input-row">
               <input type={show ? 'text' : 'password'} value={s.apiKey} placeholder="AIza..."
                 onChange={(e) => setS({ ...s, apiKey: e.target.value })} />
@@ -139,21 +137,6 @@ export function SettingsModal({ onClose, onExport, onImport }: Props) {
           </p>
 
           <UsagePanel />
-
-          <div className="field">
-            <span>다른 기기로 옮기기</span>
-            <div className="input-row">
-              <button className="btn btn--sm" onClick={onExport}>내보내기 (백업 파일 저장)</button>
-              <label className="btn btn--ghost btn--sm">
-                가져오기 (백업 파일 열기)
-                <input type="file" accept="application/json" hidden
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) onImport(f); e.target.value = '' }} />
-              </label>
-            </div>
-            <p className="hint" style={{ padding: '4px 0 0' }}>
-              곡 데이터는 이 브라우저에만 저장됩니다. 다른 PC로 옮기려면 내보내기한 파일을 그쪽에서 가져오기 하세요.
-            </p>
-          </div>
         </div>
 
         <div className="modal__foot">

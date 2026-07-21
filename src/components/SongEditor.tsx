@@ -4,7 +4,6 @@ import { PRACTICE_STATUSES } from '../types'
 import type { GenerateResult } from '../ai/generate'
 import { newBar, newSection } from '../db'
 import { NOTE_NAMES, transposeChord, transposeNote } from '../music/chords'
-import { GENRE_TAGS, MOOD_TAGS } from '../tags'
 import { ChordStrip } from './ChordStrip'
 
 type GenMeta = Omit<GenerateResult, 'song'>
@@ -81,35 +80,6 @@ function ChordTagInput({ chords, onChange }: { chords: string[]; onChange: (c: s
           size={chords.length === 0 ? 4 : 2}
         />
       )}
-    </div>
-  )
-}
-
-function TagPicker({ label, options, selected, onChange }: {
-  label: string
-  options: readonly string[]
-  selected: string[]
-  onChange: (tags: string[]) => void
-}) {
-  function toggle(tag: string) {
-    onChange(selected.includes(tag) ? selected.filter((t) => t !== tag) : [...selected, tag])
-  }
-  // 리스트에 없는 기존 태그(AI 생성/과거 데이터)도 표시하고 눌러서 제거 가능
-  const legacy = selected.filter((t) => !options.includes(t))
-  return (
-    <div className="field">
-      <span>{label}</span>
-      <div className="tag-select">
-        {options.map((t) => (
-          <button key={t} type="button"
-            className={'chip chip--select' + (selected.includes(t) ? ' is-on' : '')}
-            onClick={() => toggle(t)}>{t}</button>
-        ))}
-        {legacy.map((t) => (
-          <button key={t} type="button" className="chip chip--select is-on" title="리스트 외 태그 — 누르면 제거"
-            onClick={() => toggle(t)}>{t} ×</button>
-        ))}
-      </div>
     </div>
   )
 }
@@ -229,10 +199,6 @@ export function SongEditor({ song, genMeta, onSave, onCancel, onDelete }: Props)
             ))}
           </div>
         </div>
-        <TagPicker label="장르 태그" options={GENRE_TAGS} selected={draft.genreTags}
-          onChange={(tags) => set('genreTags', tags)} />
-        <TagPicker label="분위기 태그" options={MOOD_TAGS} selected={draft.moodTags}
-          onChange={(tags) => set('moodTags', tags)} />
       </div>
 
       {genMeta && <GenNotice meta={genMeta} />}

@@ -79,8 +79,6 @@ export function SongView({ song, onEdit, onBack }: Props) {
         <div className="ctrl meta">
           <span className={'chip chip--status chip--' + song.status}>{statusLabel(song.status)}</span>
           {song.tempo ? <span className="chip">♩ {song.tempo}</span> : null}
-          {song.genreTags.map((t) => <span key={'g' + t} className="chip chip--genre">{t}</span>)}
-          {song.moodTags.map((t) => <span key={'m' + t} className="chip chip--mood">{t}</span>)}
         </div>
       </div>
 

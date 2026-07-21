@@ -1,34 +1,5 @@
-import Dexie, { type Table } from 'dexie'
 import type { Song, Section, Bar } from './types'
-
-export class MusicHelperDb extends Dexie {
-  songs!: Table<Song, string>
-
-  constructor() {
-    super('music-helper')
-    // v1 (legacy, ChordPro text model)
-    this.version(1).stores({
-      songs: 'id, title, artist, originalKey, updatedAt, *tags',
-    })
-    // v2: measure-based model. Old-shape rows can't render — clear on upgrade so seeds refresh.
-    this.version(2)
-      .stores({ songs: 'id, title, artist, originalKey, updatedAt, *tags' })
-      .upgrade((tx) => tx.table('songs').clear())
-    // v3: split tags into mood/genre + add practice status. Migrate existing rows in place.
-    this.version(3)
-      .stores({ songs: 'id, title, artist, originalKey, updatedAt, status, *moodTags, *genreTags' })
-      .upgrade((tx) =>
-        tx.table('songs').toCollection().modify((s: Record<string, unknown>) => {
-          s.moodTags = s.moodTags ?? []
-          s.genreTags = s.genreTags ?? (Array.isArray(s.tags) ? s.tags : [])
-          s.status = s.status ?? 'want'
-          delete s.tags
-        }),
-      )
-  }
-}
-
-export const db = new MusicHelperDb()
+import { supabase, type Owner } from './supabase'
 
 let counter = 0
 export function uid(): string {
@@ -67,28 +38,104 @@ export function newSong(partial?: Partial<Song>): Song {
   }
 }
 
-export async function saveSong(song: Song): Promise<void> {
+// ---- Supabase row <-> Song mapping ----
+interface SongRow {
+  id: string
+  owner: string
+  title: string
+  artist: string
+  original_key: string
+  tempo: number | null
+  mood_tags: string[] | null
+  genre_tags: string[] | null
+  status: string
+  capo_fret: number | null
+  fingerings: Record<string, number> | null
+  hidden_chords: string[] | null
+  pinned_chords: string[] | null
+  sections: Section[] | null
+  created_at: number
+  updated_at: number
+}
+
+function toRow(song: Song, owner: Owner): SongRow {
+  return {
+    id: song.id,
+    owner,
+    title: song.title,
+    artist: song.artist,
+    original_key: song.originalKey,
+    tempo: song.tempo ?? null,
+    mood_tags: song.moodTags,
+    genre_tags: song.genreTags,
+    status: song.status,
+    capo_fret: song.capoFret ?? 0,
+    fingerings: song.fingerings ?? {},
+    hidden_chords: song.hiddenChords ?? [],
+    pinned_chords: song.pinnedChords ?? [],
+    sections: song.sections,
+    created_at: song.createdAt,
+    updated_at: song.updatedAt,
+  }
+}
+
+function fromRow(row: SongRow): Song {
+  return {
+    id: row.id,
+    title: row.title,
+    artist: row.artist,
+    originalKey: row.original_key,
+    tempo: row.tempo ?? undefined,
+    moodTags: row.mood_tags ?? [],
+    genreTags: row.genre_tags ?? [],
+    status: (row.status as Song['status']) ?? 'want',
+    capoFret: row.capo_fret ?? 0,
+    fingerings: row.fingerings ?? {},
+    hiddenChords: row.hidden_chords ?? [],
+    pinnedChords: row.pinned_chords ?? [],
+    sections: row.sections ?? [],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+function requireClient() {
+  if (!supabase) throw new Error('Supabase 설정이 필요합니다. 설정에서 URL/키를 확인하세요.')
+  return supabase
+}
+
+export async function allSongs(owner: Owner): Promise<Song[]> {
+  const { data, error } = await requireClient()
+    .from('songs')
+    .select('*')
+    .eq('owner', owner)
+    .order('updated_at', { ascending: false })
+  if (error) throw new Error(error.message)
+  return (data as SongRow[]).map(fromRow)
+}
+
+export async function countSongs(owner: Owner): Promise<number> {
+  const { count, error } = await requireClient()
+    .from('songs')
+    .select('id', { count: 'exact', head: true })
+    .eq('owner', owner)
+  if (error) throw new Error(error.message)
+  return count ?? 0
+}
+
+export async function saveSong(song: Song, owner: Owner): Promise<void> {
   song.updatedAt = Date.now()
-  await db.songs.put(song)
+  const { error } = await requireClient().from('songs').upsert(toRow(song, owner))
+  if (error) throw new Error(error.message)
+}
+
+export async function bulkSaveSongs(songs: Song[], owner: Owner): Promise<void> {
+  const rows = songs.map((s) => toRow({ ...s, updatedAt: s.updatedAt || Date.now() }, owner))
+  const { error } = await requireClient().from('songs').upsert(rows)
+  if (error) throw new Error(error.message)
 }
 
 export async function deleteSong(id: string): Promise<void> {
-  await db.songs.delete(id)
-}
-
-export async function allSongs(): Promise<Song[]> {
-  return db.songs.orderBy('updatedAt').reverse().toArray()
-}
-
-export async function exportJson(): Promise<string> {
-  const songs = await db.songs.toArray()
-  return JSON.stringify({ app: 'music-helper', version: 2, songs }, null, 2)
-}
-
-export async function importJson(text: string): Promise<number> {
-  const data = JSON.parse(text)
-  const songs: Song[] = Array.isArray(data) ? data : data.songs
-  if (!Array.isArray(songs)) throw new Error('올바른 백업 파일이 아닙니다.')
-  await db.songs.bulkPut(songs)
-  return songs.length
+  const { error } = await requireClient().from('songs').delete().eq('id', id)
+  if (error) throw new Error(error.message)
 }
