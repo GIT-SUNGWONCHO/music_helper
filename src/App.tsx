@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import type { Song } from './types'
 import type { GenerateResult } from './ai/generate'
-import { db, allSongs, saveSong, deleteSong, newSong } from './db'
+import { db, allSongs, saveSong, deleteSong, newSong, exportJson, importJson } from './db'
 import { seedSongs } from './seed'
 import { SongList } from './components/SongList'
 import { SongView } from './components/SongView'
@@ -66,6 +66,25 @@ export default function App() {
     setGeneratedSong(song)
     setScreen({ name: 'edit', id: song.id, isNew: true })
   }
+  async function handleExport() {
+    const text = await exportJson()
+    const blob = new Blob([text], { type: 'application/json' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `music-helper-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
+  async function handleImport(file: File) {
+    try {
+      const n = await importJson(await file.text())
+      await refresh()
+      alert(`${n}곡을 가져왔습니다.`)
+    } catch (e) {
+      alert('가져오기 실패: ' + (e as Error).message)
+    }
+  }
+
   if (!ready) return <div className="loading">불러오는 중…</div>
 
   const song = screen.name === 'list' ? undefined : current(screen.id)
@@ -95,7 +114,9 @@ export default function App() {
           onDelete={handleDelete} />
       )}
 
-      {modal === 'settings' && <SettingsModal onClose={() => setModal('none')} />}
+      {modal === 'settings' && (
+        <SettingsModal onClose={() => setModal('none')} onExport={handleExport} onImport={handleImport} />
+      )}
       {modal === 'generate' && (
         <GenerateModal onClose={() => setModal('none')} onOpenSettings={() => setModal('settings')} onGenerated={handleGenerated} />
       )}
