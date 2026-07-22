@@ -71,23 +71,16 @@ export function SongView({ song, onEdit, onBack, onDuplicate, onDelete }: Props)
           <button className="btn btn--ghost btn--sm" onClick={onDuplicate}>복제</button>
           <button className="btn" onClick={onEdit}>편집</button>
         </div>
-        <div className="toolbar__title toolbar__title--full">
-          <strong>{song.title}</strong>
-          {song.artist && <span className="muted"> · {song.artist}</span>}
+        <div className="toolbar__title toolbar__title--full toolbar__title--split">
+          <div className="toolbar__title-text">
+            <strong>{song.title}</strong>
+            {song.artist && <span className="muted toolbar__artist"> · {song.artist}</span>}
+          </div>
+          <span className={'chip chip--status chip--' + song.status}>{statusLabel(song.status)}</span>
         </div>
       </div>
 
       <div className="controls">
-        <div className="ctrl">
-          <span className="ctrl__label">키</span>
-          <button className="btn btn--icon" onClick={() => setSemitones((s) => s - 1)}>−</button>
-          <span className="ctrl__value">{displayKey}</span>
-          <button className="btn btn--icon" onClick={() => setSemitones((s) => s + 1)}>+</button>
-          {semitones !== 0 && (
-            <button className="btn btn--ghost btn--sm" onClick={() => setSemitones(0)}>원키 {song.originalKey}</button>
-          )}
-        </div>
-
         <div className="ctrl">
           <span className="ctrl__label">글자</span>
           <button className="btn btn--icon" onClick={() => setScale((s) => Math.max(0.7, +(s - 0.1).toFixed(2)))}>A−</button>
@@ -95,11 +88,12 @@ export function SongView({ song, onEdit, onBack, onDuplicate, onDelete }: Props)
         </div>
 
         <div className="ctrl">
-          <span className="ctrl__label">마디</span>
-          <button className="btn btn--sm" title="두 마디를 하나로 합치기" onClick={() => setMergeStep((n) => Math.min(2, n + 1))} disabled={mergeStep >= 2}>합치기</button>
-          <button className="btn btn--sm" title="한 마디를 둘로 나누기" onClick={() => setMergeStep((n) => Math.max(-2, n - 1))} disabled={mergeStep <= -2}>나누기</button>
-          {mergeStep !== 0 && (
-            <button className="btn btn--ghost btn--sm" onClick={() => setMergeStep(0)}>원래대로</button>
+          <span className="ctrl__label">키</span>
+          <button className="btn btn--icon" onClick={() => setSemitones((s) => s - 1)}>−</button>
+          <span className="ctrl__value">{displayKey}</span>
+          <button className="btn btn--icon" onClick={() => setSemitones((s) => s + 1)}>+</button>
+          {semitones !== 0 && (
+            <button className="btn btn--ghost btn--sm" onClick={() => setSemitones(0)}>원키 {song.originalKey}</button>
           )}
         </div>
 
@@ -119,10 +113,20 @@ export function SongView({ song, onEdit, onBack, onDuplicate, onDelete }: Props)
           </div>
         )}
 
-        <div className="ctrl meta">
-          <span className={'chip chip--status chip--' + song.status}>{statusLabel(song.status)}</span>
-          {song.tempo ? <span className="chip">♩ {song.tempo}</span> : null}
+        <div className="ctrl">
+          <span className="ctrl__label">마디</span>
+          <button className="btn btn--sm" title="두 마디를 하나로 합치기" onClick={() => setMergeStep((n) => Math.min(2, n + 1))} disabled={mergeStep >= 2}>합치기</button>
+          <button className="btn btn--sm" title="한 마디를 둘로 나누기" onClick={() => setMergeStep((n) => Math.max(-2, n - 1))} disabled={mergeStep <= -2}>나누기</button>
+          {mergeStep !== 0 && (
+            <button className="btn btn--ghost btn--sm" onClick={() => setMergeStep(0)}>원래대로</button>
+          )}
         </div>
+
+        {song.tempo ? (
+          <div className="ctrl meta">
+            <span className="chip">♩ {song.tempo}</span>
+          </div>
+        ) : null}
       </div>
 
       <ChordStrip sections={song.sections} semitones={fingeringOffset} rootKey={transposeNote(song.originalKey, fingeringOffset)}

@@ -6,17 +6,14 @@ interface Props {
   semitones: number
 }
 
-/** 한 슬롯(=원래 마디 하나) 안의 코드 표시. 코드 2개면 슬롯을 반으로 나눠 배치. */
+/** 한 슬롯(=원래 마디 하나) 안의 코드 표시. 코드가 여러 개면 슬롯을 그 수만큼 균등하게 나눠 배치.
+ *  코드 없으면 빈 채로 둠(홀드). */
 function ChordSlot({ chords, semitones }: { chords: string[]; semitones: number }) {
   return (
-    <div className="bar__chords" data-count={chords.length}>
-      {chords.length === 0 ? (
-        <span className="bar__hold">%</span>
-      ) : (
-        chords.map((c, i) => (
-          <span className="bar__chord" key={i}>{transposeChord(c, semitones)}</span>
-        ))
-      )}
+    <div className="bar__chords" style={chords.length > 1 ? { display: 'grid', gridTemplateColumns: `repeat(${chords.length}, 1fr)` } : undefined}>
+      {chords.map((c, i) => (
+        <span className="bar__chord" key={i}>{transposeChord(c, semitones)}</span>
+      ))}
     </div>
   )
 }

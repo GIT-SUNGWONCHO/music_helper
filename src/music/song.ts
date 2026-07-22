@@ -1,6 +1,7 @@
 // Helpers over the measure-based Song model.
 import type { Bar, Section } from '../types'
 import { transposeChord } from './chords'
+import { uid } from '../db'
 
 /** 화면 표시용 마디. 합쳐진 경우 원래 마디별로 코드를 슬롯으로 나눠 보존해
  *  각 원래 마디가 합쳐진 마디 안에서 자기 몫의 폭을 차지하도록 한다. */
@@ -48,6 +49,35 @@ function regroupBars(bars: Bar[], step: number): DisplayBar[] {
     return out
   }
   return bars.map((b) => ({ id: b.id, lyric: b.lyric, slots: [b.chords] }))
+}
+
+/** 마디를 둘씩 짝지어 하나로 합침(코드 이어붙임, 가사는 공백으로 연결). 홀수면 마지막 마디는 그대로.
+ *  실제로 마디 개수를 바꾸는 편집용 변환(표시 전용 regroupSections와 다름). */
+export function mergeBarsPairwise(sections: Section[]): Section[] {
+  return sections.map((sec) => {
+    const bars: Bar[] = []
+    for (let i = 0; i < sec.bars.length; i += 2) {
+      const a = sec.bars[i]
+      const b = sec.bars[i + 1]
+      if (!b) { bars.push(a); continue }
+      bars.push({ id: a.id, chords: [...a.chords, ...b.chords], lyric: [a.lyric, b.lyric].filter(Boolean).join(' ') })
+    }
+    return { ...sec, bars }
+  })
+}
+
+/** 각 마디를 둘로 나눔 — 코드는 절반씩(홀수면 앞쪽이 하나 더), 가사는 임의로 나누지 않고 전부 앞쪽 마디로.
+ *  (합치기를 정확히 되돌리는 용도는 "원래대로"가 별도로 스냅샷으로 처리함 — 이건 독립적인 나누기용.) */
+export function splitBarsInHalf(sections: Section[]): Section[] {
+  return sections.map((sec) => {
+    const bars: Bar[] = []
+    for (const bar of sec.bars) {
+      const mid = Math.ceil(bar.chords.length / 2)
+      bars.push({ id: bar.id, chords: bar.chords.slice(0, mid), lyric: bar.lyric })
+      bars.push({ id: uid(), chords: bar.chords.slice(mid), lyric: '' })
+    }
+    return { ...sec, bars }
+  })
 }
 
 export function transposeBar(bar: Bar, semitones: number): Bar {
