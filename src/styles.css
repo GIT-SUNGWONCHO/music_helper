@@ -209,10 +209,11 @@ body {
 
 /* ---------- chord diagrams ---------- */
 .diagram-strip {
-  display: flex; flex-wrap: wrap; gap: 12px; padding: 14px 16px;
+  display: flex; flex-wrap: nowrap; gap: 12px; padding: 14px 16px;
   border-bottom: 1px solid var(--border); background: var(--bg-row);
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
 }
-.diagram { display: flex; flex-direction: column; align-items: center; }
+.diagram { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
 .diagram-btn {
   background: none; border: 1px solid transparent; border-radius: var(--r-sm);
   padding: 4px; cursor: pointer; transition: border-color 0.15s, background 0.15s;
@@ -224,7 +225,7 @@ body {
   font-size: 0.78rem; color: var(--muted); font-family: var(--font-sans);
   padding: 8px 16px 0; background: var(--bg-row);
 }
-.diagram-cell { position: relative; }
+.diagram-cell { position: relative; flex-shrink: 0; }
 .diagram-cell__x {
   position: absolute; top: -4px; right: -4px; width: 18px; height: 18px; line-height: 1;
   border: none; background: transparent; color: var(--faint); cursor: pointer; border-radius: 4px;
@@ -233,7 +234,7 @@ body {
 .diagram-cell:hover .diagram-cell__x, .diagram-cell__x:focus-visible { opacity: 1; }
 .diagram-cell__x:hover { background: var(--bg-elev); color: var(--danger); }
 .chord-add {
-  align-self: center; padding: 8px 12px; cursor: pointer;
+  align-self: center; flex-shrink: 0; white-space: nowrap; padding: 8px 12px; cursor: pointer;
   background: none; border: 1px dashed var(--border-strong); border-radius: var(--r-sm);
   color: var(--muted); font-family: var(--font-mono); font-size: 0.82rem;
 }
@@ -387,6 +388,18 @@ svg .dg-basefret { fill: var(--muted); font-size: 8px; text-anchor: end; }
 .bar-row-ops:hover, .bar-row-ops:focus-within { opacity: 1; }
 
 .editor__footer { padding: 24px 16px; }
+
+.sort-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.sort-row__label { color: var(--faint); font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; font-family: var(--font-mono); }
+.sort-link {
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--faint); font-size: 0.78rem; font-family: var(--font-sans);
+}
+.sort-link:hover { color: var(--muted); }
+.sort-link.is-on {
+  color: var(--muted); font-weight: 600; text-decoration: underline;
+  text-underline-offset: 3px; text-decoration-color: var(--border-strong);
+}
 
 /* ---------- practice status + tags ---------- */
 .status-filter { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }

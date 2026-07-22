@@ -18,9 +18,16 @@ function toggleIn<T>(arr: T[], v: T): T[] {
   return arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]
 }
 
+type SortBy = 'recent' | 'title'
+const SORT_OPTIONS: { value: SortBy; label: string }[] = [
+  { value: 'recent', label: '최근순' },
+  { value: 'title', label: '제목순' },
+]
+
 export function SongList({ songs, owner, onSwitchOwner, onOpen, onDelete, onNew, onGenerate, onSettings }: Props) {
   const [query, setQuery] = useState('')
   const [statusF, setStatusF] = useState<PracticeStatus[]>([])
+  const [sortBy, setSortBy] = useState<SortBy>('recent')
   const [fabOpen, setFabOpen] = useState(false)
 
   useEffect(() => {
@@ -38,12 +45,15 @@ export function SongList({ songs, owner, onSwitchOwner, onOpen, onDelete, onNew,
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return songs.filter((s) => {
+    const result = songs.filter((s) => {
       if (statusF.length && !statusF.includes(s.status)) return false
       if (!q) return true
       return s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q)
     })
-  }, [songs, query, statusF])
+    return result.sort((a, b) =>
+      sortBy === 'title' ? a.title.localeCompare(b.title, 'ko') : b.updatedAt - a.updatedAt,
+    )
+  }, [songs, query, statusF, sortBy])
 
   return (
     <div className="list">
@@ -65,6 +75,15 @@ export function SongList({ songs, owner, onSwitchOwner, onOpen, onDelete, onNew,
 
       <input className="search" placeholder="제목·아티스트 검색"
         value={query} onChange={(e) => setQuery(e.target.value)} />
+
+      <div className="sort-row">
+        <span className="sort-row__label">정렬</span>
+        {SORT_OPTIONS.map((o) => (
+          <button key={o.value} type="button"
+            className={'sort-link' + (sortBy === o.value ? ' is-on' : '')}
+            onClick={() => setSortBy(o.value)}>{o.label}</button>
+        ))}
+      </div>
 
       <div className="status-filter">
         <button className={'status-pill' + (statusF.length === 0 ? ' is-on' : '')} onClick={() => setStatusF([])}>

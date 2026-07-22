@@ -79,6 +79,36 @@ const EXTRA_POSITIONS: Record<string, ChordPosition> = {
   'Asus2/G': { frets: [3, 0, 2, 2, 0, 0], fingers: [4, 0, 1, 2, 0, 0], baseFret: 1, barres: [] },
   'Asus2/F#': { frets: [2, 0, 2, 2, 0, 0], fingers: [4, 0, 1, 2, 0, 0], baseFret: 1, barres: [] },
   'Asus2/E': { frets: [0, 0, 2, 2, 0, 0], fingers: [0, 0, 1, 2, 0, 0], baseFret: 1, barres: [] },
+  // 3도 베이스 슬래시 코드 — chords-db에 정확한 운지가 없는 것들. 기존 chords-db 운지에서
+  // 아래쪽 줄을 뮤트해나가며 목표 베이스음이 나오는 지점을 찾아 파생(검증된 실제 셰이프 기반이라
+  // 손으로 통째로 지어낸 것보다 신뢰도 높음), 손으로 음정 재검산 완료.
+  'C/E': { frets: [-1, -1, 2, 0, 1, 0], fingers: [0, 0, 2, 0, 1, 0], baseFret: 1, barres: [] },
+  'C#/F': { frets: [-1, -1, 3, 1, 2, 1], fingers: [0, 0, 3, 1, 2, 1], baseFret: 1, barres: [] },
+  'Eb/G': { frets: [-1, -1, 3, 1, 2, 1], fingers: [0, 0, 3, 1, 2, 1], baseFret: 3, barres: [] },
+  'A/C#': { frets: [-1, -1, -1, 2, 1, 1], fingers: [0, 0, 0, 2, 1, 1], baseFret: 5, barres: [] },
+  'Bb/D': { frets: [-1, 3, 1, 1, 1, -1], fingers: [0, 3, 1, 1, 1, 0], baseFret: 3, barres: [] },
+  'B/Eb': { frets: [-1, -1, -1, 2, 1, 1], fingers: [0, 0, 0, 2, 1, 1], baseFret: 7, barres: [] },
+  'Cm/Eb': { frets: [-1, -1, 1, 0, 1, 3], fingers: [0, 0, 2, 0, 1, 4], baseFret: 1, barres: [] },
+  'C#m/E': { frets: [-1, -1, 2, 1, 2, -1], fingers: [0, 0, 2, 1, 3, 0], baseFret: 1, barres: [] },
+  'Em/G': { frets: [-1, -1, -1, 0, 0, 0], fingers: [0, 0, 0, 0, 0, 0], baseFret: 1, barres: [] },
+  'Fm/Ab': { frets: [-1, -1, -1, 1, 1, 1], fingers: [0, 0, 0, 1, 1, 1], baseFret: 1, barres: [] },
+  'Gm/Bb': { frets: [-1, 1, 0, 0, 3, 3], fingers: [0, 1, 0, 0, 3, 4], baseFret: 1, barres: [] },
+  'Am/C': { frets: [-1, -1, -1, 4, 4, 4], fingers: [0, 0, 0, 4, 4, 4], baseFret: 2, barres: [] },
+  'Bbm/C#': { frets: [-1, -1, -1, 1, 1, 1], fingers: [0, 0, 0, 1, 1, 1], baseFret: 6, barres: [] },
+}
+
+/** 파워코드(5) — chords-db에 없어서 무빙 셰이프를 직접 계산. 6번줄(로우E) 루트 셰이프와
+ *  5번줄(A) 루트 셰이프 2종. 물리적으로 항상 정확함(근사 아님). */
+function powerChordPositions(rootPc: number): ChordPosition[] {
+  const fret6 = ((rootPc - OPEN_STRING_PC[0]) % 12 + 12) % 12
+  const fret5 = ((rootPc - OPEN_STRING_PC[1]) % 12 + 12) % 12
+  const shape6: ChordPosition = fret6 === 0
+    ? { frets: [0, 2, 2, -1, -1, -1], fingers: [0, 2, 3, 0, 0, 0], baseFret: 1, barres: [] }
+    : { frets: [1, 3, 3, -1, -1, -1], fingers: [1, 3, 4, 0, 0, 0], baseFret: fret6, barres: [] }
+  const shape5: ChordPosition = fret5 === 0
+    ? { frets: [-1, 0, 2, 2, -1, -1], fingers: [0, 0, 2, 3, 0, 0], baseFret: 1, barres: [] }
+    : { frets: [-1, 1, 3, 3, -1, -1], fingers: [0, 1, 3, 4, 0, 0], baseFret: fret5, barres: [] }
+  return [shape6, shape5]
 }
 
 /** 이 운지에서 실제로 울리는 가장 낮은 줄의 음(pitch class). 뮤트 줄은 건너뜀. */
@@ -97,6 +127,11 @@ function bassPitchClassOf(position: ChordPosition): number | null {
 export function getPositions(token: string): { positions: ChordPosition[]; exact: boolean } | null {
   const parsed = parseChord(token)
   if (!parsed) return null
+  if (parsed.quality.trim() === '5' && !parsed.bass) {
+    const pc = pitchClass(parsed.root)
+    if (Number.isNaN(pc)) return null
+    return { positions: powerChordPositions(pc), exact: true }
+  }
   const rootKey = dbRootKey(parsed.root)
   if (!rootKey) return null
   const entries = db.chords[rootKey]
@@ -135,11 +170,12 @@ export function getDiagram(token: string, positionIndex = 0): DiagramResult | nu
   }
 }
 
-/** 루트 음의 chords-db 보유 코드 종류(suffix) 목록. */
+/** 루트 음의 코드 종류(suffix) 목록. chords-db 보유 목록 + 직접 계산하는 파워코드(5). */
 export function suffixesForRoot(root: string): string[] {
   const key = dbRootKey(root)
   if (!key) return []
-  return (db.chords[key] ?? []).filter((e) => e.positions.length > 0).map((e) => e.suffix)
+  const dbSuffixes = (db.chords[key] ?? []).filter((e) => e.positions.length > 0).map((e) => e.suffix)
+  return ['5', ...dbSuffixes]
 }
 
 /** 루트 + db suffix → 표시용 코드명 (major는 생략, minor는 m). */
