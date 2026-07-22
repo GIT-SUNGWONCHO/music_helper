@@ -90,6 +90,7 @@ function ChordTagInput({ chords, onChange }: { chords: string[]; onChange: (c: s
 export function SongEditor({ song, genMeta, onSave, onCancel, onDelete }: Props) {
   const [draft, setDraft] = useState<Song>(() => structuredClone(song))
   const [relabeling, setRelabeling] = useState(false)
+  const [mergeStep, setMergeStep] = useState(0) // 0/1/2 — 2^step개 마디를 한 칸으로 묶어 보여줌(읽기 화면의 합치기 미리보기)
 
   function set<K extends keyof Song>(key: K, value: Song[K]) {
     setDraft((d) => ({ ...d, [key]: value }))
@@ -199,6 +200,8 @@ export function SongEditor({ song, genMeta, onSave, onCancel, onDelete }: Props)
             <span>제목</span>
             <input value={draft.title} onChange={(e) => set('title', e.target.value)} />
           </label>
+        </div>
+        <div className="form__row">
           <label className="field field--grow">
             <span>아티스트</span>
             <input value={draft.artist} onChange={(e) => set('artist', e.target.value)} />
@@ -234,6 +237,18 @@ export function SongEditor({ song, genMeta, onSave, onCancel, onDelete }: Props)
               ))}
             </select>
           </label>
+          <div className="field">
+            <span>마디</span>
+            <div className="ctrl">
+              <button className="btn btn--sm" title="두 마디를 하나로 합쳐서 편집(읽기 화면 미리보기)"
+                onClick={() => setMergeStep((n) => Math.min(2, n + 1))} disabled={mergeStep >= 2}>합치기</button>
+              <button className="btn btn--sm" title="한 마디를 둘로 나눠서 표시(읽기 화면 미리보기)"
+                onClick={() => setMergeStep((n) => Math.max(-2, n - 1))} disabled={mergeStep <= -2}>나누기</button>
+              {mergeStep !== 0 && (
+                <button className="btn btn--ghost btn--sm" onClick={() => setMergeStep(0)}>원래대로</button>
+              )}
+            </div>
+          </div>
         </div>
         <div className="field">
           <span>연습 상태</span>
@@ -269,42 +284,96 @@ export function SongEditor({ song, genMeta, onSave, onCancel, onDelete }: Props)
               <button className="btn btn--icon btn--danger" title="섹션 삭제" onClick={() => removeSection(sec.id)}>✕</button>
             </div>
             <div className="bars">
-              {sec.bars.map((bar, bi) => {
-                const rowStart = Math.floor(bi / ROW_SIZE) * ROW_SIZE
-                const isRowEnd = (bi + 1) % ROW_SIZE === 0 || bi === sec.bars.length - 1
-                const row: RowRef = { secIdx: si, start: rowStart, len: bi - rowStart + 1 }
-                const canUp = !(si === 0 && rowStart === 0)
-                const canDown = !(si === draft.sections.length - 1 && bi === sec.bars.length - 1)
-                return (
+              {(() => {
+                const chordOnly = (bar: Bar) => (
                   <Fragment key={bar.id}>
-                    <div className="bar bar--edit">
-                      <button className="bar__x" title="마디 삭제" onClick={() => removeBar(sec.id, bar.id)}>×</button>
-                      <ChordTagInput
-                        chords={bar.chords}
-                        onChange={(c) => patchBar(sec.id, bar.id, { chords: c })}
-                      />
-                      <input
-                        className="bar__lyric-input"
-                        value={bar.lyric}
-                        placeholder="가사"
-                        onChange={(e) => patchBar(sec.id, bar.id, { lyric: e.target.value })}
-                      />
-                    </div>
-                    {isRowEnd && (
-                      <div className="bar-row-ops">
-                        <button className="btn btn--icon" title="이 4마디 줄 복제" onClick={() => duplicateRow(row)}>
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="9" y="9" width="11" height="11" rx="1.5" />
-                            <path d="M5 15V5.5A1.5 1.5 0 0 1 6.5 4H15" />
-                          </svg>
-                        </button>
-                        <button className="btn btn--icon" title="줄 위로 (섹션 경계 넘어감)" disabled={!canUp} onClick={() => moveRow(row, -1)}>↑</button>
-                        <button className="btn btn--icon" title="줄 아래로 (섹션 경계 넘어감)" disabled={!canDown} onClick={() => moveRow(row, 1)}>↓</button>
-                      </div>
-                    )}
+                    <button className="bar__x" title="마디 삭제" onClick={() => removeBar(sec.id, bar.id)}>×</button>
+                    <ChordTagInput
+                      chords={bar.chords}
+                      onChange={(c) => patchBar(sec.id, bar.id, { chords: c })}
+                    />
                   </Fragment>
                 )
-              })}
+                const lyricInput = (bar: Bar, className = 'bar__lyric-input') => (
+                  <input
+                    key={bar.id}
+                    className={className}
+                    value={bar.lyric}
+                    placeholder="가사"
+                    onChange={(e) => patchBar(sec.id, bar.id, { lyric: e.target.value })}
+                  />
+                )
+                const cell = (bar: Bar) => (
+                  <Fragment key={bar.id}>
+                    {chordOnly(bar)}
+                    {lyricInput(bar)}
+                  </Fragment>
+                )
+
+                // 나누기(mergeStep<0): 읽기 화면과 동일하게, 원래 마디 1개당 실제 편집칸 1개 + 빈 자리표시 칸을 늘어놓음.
+                // 표시 전용 칸이라 편집 불가 — 실제로 마디를 늘리려면 "+ 마디"를 쓰면 됨.
+                if (mergeStep < 0) {
+                  const g = 2 ** -mergeStep
+                  return sec.bars.map((bar) => (
+                    <Fragment key={bar.id}>
+                      <div className="bar bar--edit">{cell(bar)}</div>
+                      {Array.from({ length: g - 1 }, (_, k) => (
+                        <div className="bar bar--edit bar--phantom" key={bar.id + '_p' + k} aria-hidden>
+                          <span className="bar__phantom-mark">%</span>
+                        </div>
+                      ))}
+                    </Fragment>
+                  ))
+                }
+
+                // 합치기(mergeStep>0): 읽기 화면(MeasureGrid)과 동일한 방식 — 마디 "칸 개수"를 실제로 줄이고,
+                // 합쳐진 칸 안에서 원래 마디 수만큼 슬롯으로 나눔(폭을 넓히는 게 아님). 이래야 읽기 화면과 동일하게 보임.
+                const g = 2 ** mergeStep
+                const groupCount = Math.ceil(sec.bars.length / g)
+                return Array.from({ length: groupCount }, (_, gi) => {
+                  const bi0 = gi * g
+                  const group = sec.bars.slice(bi0, bi0 + g)
+                  const lastBi = bi0 + group.length - 1
+                  const rowStart = Math.floor(lastBi / ROW_SIZE) * ROW_SIZE
+                  // 합치기/나누기 미리보기 중에는 "4마디 줄" 이동/복제 도구를 숨김 — 화면상 칸 수와 --bpr(화면당 칸 수)가
+                  // 어긋나면 줄 경계가 시각적으로 안 맞아 보일 수 있어서, 원래대로일 때만 노출.
+                  const isRowEnd = mergeStep === 0 && ((lastBi + 1) % ROW_SIZE === 0 || lastBi === sec.bars.length - 1)
+                  const row: RowRef = { secIdx: si, start: rowStart, len: lastBi - rowStart + 1 }
+                  const canUp = !(si === 0 && rowStart === 0)
+                  const canDown = !(si === draft.sections.length - 1 && lastBi === sec.bars.length - 1)
+
+                  return (
+                    <Fragment key={group[0].id}>
+                      {group.length === 1 ? (
+                        <div className="bar bar--edit">{cell(group[0])}</div>
+                      ) : (
+                        <div className="bar bar--edit bar-group">
+                          <div className="bar-group__slots" style={{ gridTemplateColumns: `repeat(${group.length}, 1fr)` }}>
+                            {group.map((b) => (
+                              <div className="bar-group__slot" key={b.id}>{chordOnly(b)}</div>
+                            ))}
+                          </div>
+                          <div className="bar-group__lyric-row">
+                            {group.map((b) => lyricInput(b, 'bar__lyric-input bar-group__lyric-input'))}
+                          </div>
+                        </div>
+                      )}
+                      {isRowEnd && (
+                        <div className="bar-row-ops">
+                          <button className="btn btn--icon" title="이 4마디 줄 복제" onClick={() => duplicateRow(row)}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="9" y="9" width="11" height="11" rx="1.5" />
+                              <path d="M5 15V5.5A1.5 1.5 0 0 1 6.5 4H15" />
+                            </svg>
+                          </button>
+                          <button className="btn btn--icon" title="줄 위로 (섹션 경계 넘어감)" disabled={!canUp} onClick={() => moveRow(row, -1)}>↑</button>
+                          <button className="btn btn--icon" title="줄 아래로 (섹션 경계 넘어감)" disabled={!canDown} onClick={() => moveRow(row, 1)}>↓</button>
+                        </div>
+                      )}
+                    </Fragment>
+                  )
+                })
+              })()}
               <button className="bar bar--add" onClick={() => addBar(sec.id)}>+ 마디</button>
             </div>
           </section>

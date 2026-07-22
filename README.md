@@ -1,7 +1,13 @@
 # Music Helper 🎸
 
-기타/베이스 연주용 **코드 악보** 웹앱. PC·태블릿·모바일 공용, 로컬 우선(local-first) PWA.
+기타/베이스 연주용 **코드 악보** 웹앱. PC·태블릿·모바일 공용.
 혼자 쓰다 지인 확장 목적, 무료 지향.
+
+## 배포
+https://music-helper-five.vercel.app/
+
+Vercel에 연결 배포됨. 데이터는 Supabase(Postgres)에 저장(기기 간 동기화됨) — `.env.local`에
+`VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` 필요, Vercel 프로젝트 환경변수에도 동일하게 설정돼 있어야 함.
 
 ## 스택
 - React 18 + Vite + TypeScript

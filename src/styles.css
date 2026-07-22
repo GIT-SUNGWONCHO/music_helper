@@ -174,13 +174,26 @@ body {
 .fab:hover { background: color-mix(in srgb, var(--accent) 88%, white); }
 .fab.is-open { background: var(--bg-elev); color: var(--text); border: 1px solid var(--border-strong); box-shadow: none; }
 
+.scroll-fab {
+  position: fixed; right: max(20px, calc((100vw - 640px) / 2 + 20px)); bottom: 28px; z-index: 8;
+  width: 52px; height: 52px; border-radius: var(--r-lg);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-elev); border: 1px solid var(--border-strong); cursor: pointer;
+  color: var(--accent-soft); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+.scroll-fab:hover { border-color: var(--accent-soft); color: var(--accent); }
+.scroll-fab:active { transform: translateY(1px); }
+
 /* ---------- toolbar / controls ---------- */
 .toolbar {
   position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px;
   padding: 14px 16px; background: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
 }
+.toolbar--stacked { flex-direction: column; align-items: stretch; gap: 8px; }
+.toolbar__row { display: flex; align-items: center; gap: 10px; }
 .toolbar__title { flex: 1; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.95rem; font-family: var(--font-sans); }
+.toolbar__title--full { flex: none; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1rem; }
 
 .controls {
   display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px;
@@ -266,8 +279,8 @@ svg .dg-basefret { fill: var(--muted); font-size: 8px; text-anchor: end; }
 .sheet { padding: 16px; }
 .sec { margin-bottom: 22px; }
 .sec__label {
-  color: var(--text); font-weight: 700; font-size: 0.72em; text-transform: uppercase;
-  letter-spacing: 0.1em; margin-bottom: 8px; padding-left: 9px; border-left: 2px solid var(--accent);
+  color: var(--muted); font-weight: 700; font-size: 0.72em; text-transform: uppercase;
+  letter-spacing: 0.1em; margin-bottom: 8px; padding-left: 9px; border-left: 2px solid var(--border-strong);
   font-family: var(--font-mono);
 }
 .bars {
@@ -282,6 +295,8 @@ svg .dg-basefret { fill: var(--muted); font-size: 8px; text-anchor: end; }
   padding: 8px 10px 9px; min-height: 54px; display: flex; flex-direction: column; gap: 3px;
   background: var(--bg-row);
 }
+.bar__slots { display: grid; gap: 0; }
+.bar__slots > .bar__chords:not(:first-child) { padding-left: 8px; margin-left: 8px; border-left: 1px dashed var(--border-strong); }
 .bar__chords { display: flex; flex-wrap: wrap; gap: 8px; min-height: 1.3em; }
 .bar__chord { color: var(--chord); font-weight: 700; font-size: 0.98em; font-family: var(--font-mono); }
 .bar__hold { color: var(--faint); font-size: 0.9em; }
@@ -323,6 +338,18 @@ svg .dg-basefret { fill: var(--muted); font-size: 8px; text-anchor: end; }
 }
 .bar--edit:hover .bar__x, .bar__x:focus-visible { opacity: 1; }
 .bar__x:hover { background: var(--bg-elev); color: var(--danger); }
+
+/* 편집 화면 마디 합치기 미리보기 — 여러 원래 마디를 한 칸으로 묶어 보여줌(읽기 화면과 동일한 슬롯 폭) */
+.sheet--edit .bar-group.bar--edit { padding: 0; }
+.bar-group__slots { display: grid; height: 100%; }
+.bar-group__slot { position: relative; padding: 7px 9px 8px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bar-group__slot:not(:first-child) { border-left: 1px dashed var(--border-strong); }
+.bar-group__slot:hover .bar__x, .bar-group__slot:focus-within .bar__x { opacity: 1; }
+/* 가사는 슬롯 구분선 없이 한 줄처럼 이어 보이게(뷰어의 이어붙인 가사와 같은 느낌), 실제로는 각각 편집 가능 */
+.bar-group__lyric-row { display: flex; padding: 0 9px 8px; gap: 6px; }
+.bar-group__lyric-input { flex: 1 1 0; width: auto; min-width: 0; }
+.bar--phantom { display: flex; align-items: center; justify-content: center; background: transparent; }
+.bar__phantom-mark { color: var(--faint); font-size: 0.9em; font-family: var(--font-mono); }
 /* chord tag input (editor) */
 .chord-tag-input {
   display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
@@ -497,10 +524,16 @@ svg .dg-basefret { fill: var(--muted); font-size: 8px; text-anchor: end; }
   .sheet .bars .bar:nth-child(4n+3), .sheet .bars .bar:nth-child(4n+4) {
     background: color-mix(in srgb, var(--bg-elev) 55%, var(--bg-row));
   }
+  /* iOS Safari는 포커스된 입력 요소의 글자 크기가 16px 미만이면 화면을 자동 확대함.
+     16px 미만 입력 요소를 여기서 모두 모아 확대되지 않게 함(모바일에서만, 데스크톱 크기는 유지). */
+  .field input, .field select, .search,
+  .bar__chord-input, .bar__lyric-input, .sec__label-input {
+    font-size: 16px;
+  }
 }
 
 @media print {
-  .toolbar, .controls, .hint, .app-header__actions, .diagram-strip, .fab-group { display: none !important; }
+  .toolbar, .controls, .hint, .app-header__actions, .diagram-strip, .fab-group, .scroll-fab { display: none !important; }
   body { background: #fff; color: #000; }
   .sheet { padding: 0; }
   .bar__chord { color: #000; }

@@ -11,7 +11,7 @@ export const supabase = supabaseReady ? createClient(url!, anonKey!) : null
 export type Owner = 'sungwon' | 'friend'
 export const OWNERS: { value: Owner; label: string }[] = [
   { value: 'sungwon', label: '성원' },
-  { value: 'friend', label: '지인' },
+  { value: 'friend', label: '민형' },
 ]
 
 const OWNER_KEY = 'mh.owner.v1'
@@ -24,4 +24,10 @@ export function loadOwner(): Owner {
 
 export function saveOwner(owner: Owner): void {
   localStorage.setItem(OWNER_KEY, owner)
+}
+
+/** 이 기기에서 한 번이라도 누구인지 직접 선택한 적이 있는지. 없으면 첫 실행 안내를 띄워야
+ *  기본값(성원)으로 조용히 쌓이는 걸 막을 수 있음. */
+export function hasChosenOwner(): boolean {
+  return localStorage.getItem(OWNER_KEY) !== null
 }

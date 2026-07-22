@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import type { Song } from './types'
 import type { GenerateResult } from './ai/generate'
 import { allSongs, saveSong, deleteSong, newSong, countSongs, bulkSaveSongs } from './db'
-import { supabaseReady, loadOwner, saveOwner, type Owner } from './supabase'
+import { supabaseReady, loadOwner, saveOwner, hasChosenOwner, type Owner } from './supabase'
 import { seedSongs } from './seed'
 import { SongList } from './components/SongList'
 import { SongView } from './components/SongView'
@@ -10,6 +10,7 @@ import { SongEditor } from './components/SongEditor'
 import { SettingsModal } from './components/SettingsModal'
 import { GenerateModal } from './components/GenerateModal'
 import { PinPrompt } from './components/PinPrompt'
+import { OwnerPicker } from './components/OwnerPicker'
 
 type Modal = 'none' | 'generate' | 'settings' | 'pin'
 
@@ -31,6 +32,7 @@ function SupabaseSetupNotice() {
 
 export default function App() {
   const [owner, setOwner] = useState<Owner>(() => loadOwner())
+  const [ownerChosen, setOwnerChosen] = useState(() => hasChosenOwner())
   const [songs, setSongs] = useState<Song[]>([])
   const [screen, setScreen] = useState<Screen>({ name: 'list' })
   const [ready, setReady] = useState(false)
@@ -44,6 +46,7 @@ export default function App() {
 
   useEffect(() => {
     if (!supabaseReady) { setReady(true); return }
+    if (!ownerChosen) return // 누구인지 고르기 전에는 어떤 owner로도 조회/시드하지 않음
     let cancelled = false
     ;(async () => {
       setReady(false)
@@ -57,12 +60,17 @@ export default function App() {
       setReady(true)
     })()
     return () => { cancelled = true }
-  }, [owner, refresh])
+  }, [owner, ownerChosen, refresh])
 
   function switchOwner(o: Owner) {
     saveOwner(o)
     setOwner(o)
     setScreen({ name: 'list' })
+  }
+  function chooseOwner(o: Owner) {
+    saveOwner(o)
+    setOwner(o)
+    setOwnerChosen(true)
   }
 
   const current = (id: string) => songs.find((s) => s.id === id) ?? (generatedSong?.id === id ? generatedSong : undefined)
@@ -103,6 +111,7 @@ export default function App() {
     setScreen({ name: 'edit', id: song.id, isNew: true })
   }
   if (!supabaseReady) return <SupabaseSetupNotice />
+  if (!ownerChosen) return <OwnerPicker onChoose={chooseOwner} />
   if (!ready) return <div className="loading">불러오는 중…</div>
 
   const song = screen.name === 'list' ? undefined : current(screen.id)

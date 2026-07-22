@@ -1,10 +1,26 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Song } from '../types'
 import { statusLabel } from '../types'
 import { transposeNote, keyDistance } from '../music/chords'
 import { regroupSections } from '../music/song'
 import { MeasureGrid } from './MeasureGrid'
 import { ChordStrip } from './ChordStrip'
+
+const NEAR_BOTTOM_PX = 40
+
+/** 현재 스크롤 위치에서 화면의 2/3만큼 아래로, 마디(행) 경계에 맞춰 스냅한 목표 지점. */
+function nextScrollTarget(container: HTMLElement): number {
+  const bars = Array.from(container.querySelectorAll<HTMLElement>('.bar'))
+  const current = window.scrollY
+  const amount = window.innerHeight * (2 / 3)
+  if (bars.length === 0) return current + amount
+  const tops = Array.from(new Set(bars.map((b) => Math.round(b.getBoundingClientRect().top + current)))).sort((a, b) => a - b)
+  const desired = current + amount
+  const snapped = tops.find((t) => t >= desired)
+  if (snapped !== undefined && snapped > current) return snapped
+  // 다음 행이 목표 지점보다 가깝게(예: 화면이 매우 큰 경우) 있으면 최소 한 행은 이동
+  return tops.find((t) => t > current) ?? document.body.scrollHeight
+}
 
 interface Props {
   song: Song
@@ -19,23 +35,46 @@ export function SongView({ song, onEdit, onBack, onDuplicate, onDelete }: Props)
   const [capo, setCapo] = useState(song.capoFret ?? 0)
   const [scale, setScale] = useState(1)
   const [mergeStep, setMergeStep] = useState(0) // +면 합치기(넓게), -면 나누기(잘게)
+  const sheetRef = useRef<HTMLDivElement>(null)
+  const [atBottom, setAtBottom] = useState(false)
 
   const displayKey = transposeNote(song.originalKey, semitones)
   // 운지 코드 오프셋 = 전조 반음 - 카포 프렛
   const fingeringOffset = semitones - capo
   const viewSections = regroupSections(song.sections, mergeStep)
 
+  useEffect(() => {
+    function checkBottom() {
+      setAtBottom(window.scrollY + window.innerHeight >= document.body.scrollHeight - NEAR_BOTTOM_PX)
+    }
+    checkBottom()
+    window.addEventListener('scroll', checkBottom, { passive: true })
+    window.addEventListener('resize', checkBottom)
+    return () => {
+      window.removeEventListener('scroll', checkBottom)
+      window.removeEventListener('resize', checkBottom)
+    }
+  }, [viewSections])
+
+  function scrollNext() {
+    if (!sheetRef.current) return
+    window.scrollTo({ top: nextScrollTarget(sheetRef.current), behavior: 'smooth' })
+  }
+
   return (
     <div className="page view">
-      <div className="toolbar">
-        <button className="btn" onClick={onBack}>← 목록</button>
-        <div className="toolbar__title">
+      <div className="toolbar toolbar--stacked">
+        <div className="toolbar__row">
+          <button className="btn" onClick={onBack}>← 목록</button>
+          <div className="spacer" />
+          <button className="btn btn--ghost btn--sm btn--danger" onClick={() => onDelete(song.id)}>삭제</button>
+          <button className="btn btn--ghost btn--sm" onClick={onDuplicate}>복제</button>
+          <button className="btn" onClick={onEdit}>편집</button>
+        </div>
+        <div className="toolbar__title toolbar__title--full">
           <strong>{song.title}</strong>
           {song.artist && <span className="muted"> · {song.artist}</span>}
         </div>
-        <button className="btn btn--ghost btn--sm btn--danger" onClick={() => onDelete(song.id)}>삭제</button>
-        <button className="btn btn--ghost btn--sm" onClick={onDuplicate}>복제</button>
-        <button className="btn" onClick={onEdit}>편집</button>
       </div>
 
       <div className="controls">
@@ -89,7 +128,7 @@ export function SongView({ song, onEdit, onBack, onDuplicate, onDelete }: Props)
       <ChordStrip sections={song.sections} semitones={fingeringOffset} rootKey={transposeNote(song.originalKey, fingeringOffset)}
         fingerings={song.fingerings} hiddenChords={song.hiddenChords} pinnedChords={song.pinnedChords} />
 
-      <div style={{ fontSize: `${scale}rem` }}>
+      <div ref={sheetRef} style={{ fontSize: `${scale}rem` }}>
         <MeasureGrid sections={viewSections} semitones={fingeringOffset} />
       </div>
 
@@ -99,6 +138,14 @@ export function SongView({ song, onEdit, onBack, onDuplicate, onDelete }: Props)
           {semitones !== 0 && ` → ${displayKey} (${keyDistance(song.originalKey, displayKey) >= 0 ? '+' : ''}${keyDistance(song.originalKey, displayKey)}반음)`}
           {capo > 0 && ` · Capo ${capo} 운지 코드`}
         </p>
+      )}
+
+      {!atBottom && (
+        <button className="scroll-fab" title="다음 부분으로" onClick={scrollNext}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 5v14M6 13l6 6 6-6" />
+          </svg>
+        </button>
       )}
     </div>
   )
