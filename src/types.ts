@@ -55,3 +55,13 @@ export interface Song {
   createdAt: number
   updatedAt: number
 }
+
+/** Set List(셋리스트) — 합주/연습용으로 곡을 모아 순서까지 정해놓는 모음. */
+export interface SetList {
+  id: string
+  name: string
+  /** 순서가 있는 곡 id 목록 */
+  songIds: string[]
+  createdAt: number
+  updatedAt: number
+}

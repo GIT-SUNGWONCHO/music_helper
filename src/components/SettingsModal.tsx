@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { loadSettings, saveSettings, MODEL_SUGGESTIONS, type AiSettings } from '../ai/settings'
 import { listGeminiModels } from '../ai/generate'
 import { getUsage, estimateCostUsd, USD_TO_KRW, GEN_TYPE_LABEL, type GenType } from '../ai/usage'
-import { ChordLibraryModal } from './ChordLibraryModal'
 
 interface Props {
   onClose: () => void
@@ -60,7 +59,6 @@ export function SettingsModal({ onClose }: Props) {
   const [models, setModels] = useState<string[]>([])
   const [loadingModels, setLoadingModels] = useState(false)
   const [modelMsg, setModelMsg] = useState('')
-  const [showChordLib, setShowChordLib] = useState(false)
 
   function save() {
     saveSettings({ ...s, apiKey: s.apiKey.trim(), model: s.model.trim() })
@@ -89,7 +87,6 @@ export function SettingsModal({ onClose }: Props) {
   const options = models.length ? models : MODEL_SUGGESTIONS[s.provider]
 
   return (
-    <>
     <div className="modal" onClick={onClose}>
       <div className="modal__card" onClick={(e) => e.stopPropagation()}>
         <div className="modal__head">
@@ -139,13 +136,6 @@ export function SettingsModal({ onClose }: Props) {
             키 발급: <code>aistudio.google.com/apikey</code>. 키를 넣고 <b>모델 불러오기</b>를 누르면 이 키로 실제 쓸 수 있는 모델만 골라줍니다.
           </p>
 
-          <div className="field">
-            <span>코드 자료</span>
-            <button className="btn btn--sm" style={{ alignSelf: 'flex-start' }} onClick={() => setShowChordLib(true)}>
-              전체 코드표 보기
-            </button>
-          </div>
-
           <UsagePanel />
         </div>
 
@@ -155,7 +145,5 @@ export function SettingsModal({ onClose }: Props) {
         </div>
       </div>
     </div>
-    {showChordLib && <ChordLibraryModal onClose={() => setShowChordLib(false)} />}
-    </>
   )
 }

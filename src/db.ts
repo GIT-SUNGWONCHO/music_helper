@@ -1,4 +1,4 @@
-import type { Song, Section, Bar } from './types'
+import type { Song, Section, Bar, SetList } from './types'
 import { supabase, type Owner } from './supabase'
 
 let counter = 0
@@ -37,6 +37,11 @@ export function newSong(partial?: Partial<Song>): Song {
     updatedAt: now,
     ...partial,
   }
+}
+
+export function newSetList(name: string, songIds: string[] = []): SetList {
+  const now = Date.now()
+  return { id: uid(), name, songIds, createdAt: now, updatedAt: now }
 }
 
 // ---- Supabase row <-> Song mapping ----
@@ -141,5 +146,57 @@ export async function bulkSaveSongs(songs: Song[], owner: Owner): Promise<void> 
 
 export async function deleteSong(id: string): Promise<void> {
   const { error } = await requireClient().from('songs').delete().eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
+// ---- Supabase row <-> SetList mapping ----
+interface SetListRow {
+  id: string
+  owner: string
+  name: string
+  song_ids: string[] | null
+  created_at: number
+  updated_at: number
+}
+
+function setListToRow(setlist: SetList, owner: Owner): SetListRow {
+  return {
+    id: setlist.id,
+    owner,
+    name: setlist.name,
+    song_ids: setlist.songIds,
+    created_at: setlist.createdAt,
+    updated_at: setlist.updatedAt,
+  }
+}
+
+function setListFromRow(row: SetListRow): SetList {
+  return {
+    id: row.id,
+    name: row.name,
+    songIds: row.song_ids ?? [],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+export async function allSetLists(owner: Owner): Promise<SetList[]> {
+  const { data, error } = await requireClient()
+    .from('setlists')
+    .select('*')
+    .eq('owner', owner)
+    .order('updated_at', { ascending: false })
+  if (error) throw new Error(error.message)
+  return (data as SetListRow[]).map(setListFromRow)
+}
+
+export async function saveSetList(setlist: SetList, owner: Owner): Promise<void> {
+  setlist.updatedAt = Date.now()
+  const { error } = await requireClient().from('setlists').upsert(setListToRow(setlist, owner))
+  if (error) throw new Error(error.message)
+}
+
+export async function deleteSetList(id: string): Promise<void> {
+  const { error } = await requireClient().from('setlists').delete().eq('id', id)
   if (error) throw new Error(error.message)
 }

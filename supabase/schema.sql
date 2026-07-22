@@ -33,3 +33,22 @@ create policy "anon full access" on songs
   for all
   using (true)
   with check (true);
+
+-- Set List(셋리스트) — 합주/연습용 곡 모음, 순서 있음(song_ids 배열 순서 = 셋리스트 순서)
+create table if not exists setlists (
+  id text primary key,
+  owner text not null check (owner in ('sungwon', 'friend')),
+  name text not null,
+  song_ids text[] not null default '{}',
+  created_at bigint not null,
+  updated_at bigint not null
+);
+
+create index if not exists setlists_owner_idx on setlists (owner);
+
+alter table setlists enable row level security;
+
+create policy "anon full access" on setlists
+  for all
+  using (true)
+  with check (true);

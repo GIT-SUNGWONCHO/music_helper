@@ -1,17 +1,17 @@
 import { useMemo, useState, useEffect } from 'react'
-import type { Song, PracticeStatus } from '../types'
+import type { Song, PracticeStatus, SetList } from '../types'
 import { PRACTICE_STATUSES } from '../types'
-import { OWNERS, type Owner } from '../supabase'
+import { SetListPickerModal } from './SetListPickerModal'
 
 interface Props {
   songs: Song[]
-  owner: Owner
-  onSwitchOwner: (o: Owner) => void
   onOpen: (id: string) => void
   onDelete: (id: string) => void
   onNew: () => void
   onGenerate: () => void
-  onSettings: () => void
+  setlists: SetList[]
+  onToggleSongInSetList: (setlistId: string, songId: string) => void
+  onCreateSetList: (name: string, songId?: string) => void
 }
 
 function toggleIn<T>(arr: T[], v: T): T[] {
@@ -24,11 +24,15 @@ const SORT_OPTIONS: { value: SortBy; label: string }[] = [
   { value: 'title', label: '제목순' },
 ]
 
-export function SongList({ songs, owner, onSwitchOwner, onOpen, onDelete, onNew, onGenerate, onSettings }: Props) {
+export function SongList({
+  songs, onOpen, onDelete, onNew, onGenerate,
+  setlists, onToggleSongInSetList, onCreateSetList,
+}: Props) {
   const [query, setQuery] = useState('')
   const [statusF, setStatusF] = useState<PracticeStatus[]>([])
   const [sortBy, setSortBy] = useState<SortBy>('recent')
   const [sortSheetOpen, setSortSheetOpen] = useState(false)
+  const [pickerSong, setPickerSong] = useState<Song | null>(null)
   const [fabOpen, setFabOpen] = useState(false)
 
   useEffect(() => {
@@ -57,23 +61,7 @@ export function SongList({ songs, owner, onSwitchOwner, onOpen, onDelete, onNew,
   }, [songs, query, statusF, sortBy])
 
   return (
-    <div className="list">
-      <div className="app-header">
-        <div className="app-header__brand">GENCHRD<span className="app-header__brand-dot">.</span></div>
-        <div className="app-header__actions">
-          <div className="seg">
-            {OWNERS.map((o) => (
-              <button key={o.value} type="button"
-                className={'seg__btn' + (owner === o.value ? ' is-on' : '')}
-                onClick={() => onSwitchOwner(o.value)}>{o.label}</button>
-            ))}
-          </div>
-          <button className="btn btn--ghost btn--sm" onClick={onSettings}>설정</button>
-        </div>
-      </div>
-
-      <h1>라이브러리</h1>
-
+    <>
       <input className="search" placeholder="제목·아티스트 검색"
         value={query} onChange={(e) => setQuery(e.target.value)} />
 
@@ -130,9 +118,14 @@ export function SongList({ songs, owner, onSwitchOwner, onOpen, onDelete, onNew,
                 <div className="row__title">{s.title}{s.version && <span className="row__version"> ({s.version})</span>}</div>
                 <div className="row__artist">{s.artist || '—'}</div>
               </div>
-              <span className="row__meta">{s.originalKey}</span>
               <svg className="row__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none">
                 <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <button className="row__add" title="셋리스트에 담기" onClick={() => setPickerSong(s)}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h9A1.5 1.5 0 0 1 16 5.5V20l-6-4-6 4V5.5z" />
+                <path d="M19 8v6M16 11h6" />
               </svg>
             </button>
             <button className="row__del" title="삭제" onClick={() => onDelete(s.id)}>×</button>
@@ -140,6 +133,13 @@ export function SongList({ songs, owner, onSwitchOwner, onOpen, onDelete, onNew,
         ))}
         {filtered.length === 0 && <p className="empty">악보가 없습니다. 아래 + 버튼으로 시작하세요.</p>}
       </div>
+
+      {pickerSong && (
+        <SetListPickerModal song={pickerSong} setlists={setlists}
+          onToggle={onToggleSongInSetList}
+          onCreate={(name, songId) => onCreateSetList(name, songId)}
+          onClose={() => setPickerSong(null)} />
+      )}
 
       <div className="fab-group" onClick={(e) => e.stopPropagation()}>
         {fabOpen && (
@@ -164,6 +164,6 @@ export function SongList({ songs, owner, onSwitchOwner, onOpen, onDelete, onNew,
           </svg>
         </button>
       </div>
-    </div>
+    </>
   )
 }
