@@ -24,6 +24,7 @@ export function newSong(partial?: Partial<Song>): Song {
   return {
     id: uid(),
     title: '제목 없음',
+    version: undefined,
     artist: '',
     originalKey: 'C',
     tempo: undefined,
@@ -43,6 +44,7 @@ interface SongRow {
   id: string
   owner: string
   title: string
+  version: string | null
   artist: string
   original_key: string
   tempo: number | null
@@ -63,6 +65,7 @@ function toRow(song: Song, owner: Owner): SongRow {
     id: song.id,
     owner,
     title: song.title,
+    version: song.version ?? null,
     artist: song.artist,
     original_key: song.originalKey,
     tempo: song.tempo ?? null,
@@ -83,6 +86,7 @@ function fromRow(row: SongRow): Song {
   return {
     id: row.id,
     title: row.title,
+    version: row.version ?? undefined,
     artist: row.artist,
     originalKey: row.original_key,
     tempo: row.tempo ?? undefined,

@@ -30,6 +30,8 @@ export function statusLabel(s: PracticeStatus): string {
 export interface Song {
   id: string
   title: string
+  /** 같은 제목 다른 편곡을 구분하는 짧은 태그 (예: "남키", "어쿠스틱"). 제목 본문에는 넣지 않음. */
+  version?: string
   artist: string
   /** Key the chords are written in (transpose reference). e.g. "C", "G", "Bb". */
   originalKey: string

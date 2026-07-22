@@ -67,14 +67,16 @@ export function SongView({ song, onEdit, onBack, onDuplicate, onDelete }: Props)
         <div className="toolbar__row">
           <button className="btn" onClick={onBack}>← 목록</button>
           <div className="spacer" />
-          <button className="btn btn--ghost btn--sm btn--danger" onClick={() => onDelete(song.id)}>삭제</button>
-          <button className="btn btn--ghost btn--sm" onClick={onDuplicate}>복제</button>
+          <button className="btn btn--ghost btn--danger" onClick={() => onDelete(song.id)}>삭제</button>
+          <button className="btn btn--ghost" onClick={onDuplicate}>복제</button>
           <button className="btn" onClick={onEdit}>편집</button>
         </div>
         <div className="toolbar__title toolbar__title--full toolbar__title--split">
           <div className="toolbar__title-text">
             <strong>{song.title}</strong>
+            {song.version && <span className="muted toolbar__version"> ({song.version})</span>}
             {song.artist && <span className="muted toolbar__artist"> · {song.artist}</span>}
+            {song.tempo ? <span className="muted toolbar__tempo"> · ♩ {song.tempo}</span> : null}
           </div>
           <span className={'chip chip--status chip--' + song.status}>{statusLabel(song.status)}</span>
         </div>
@@ -121,12 +123,6 @@ export function SongView({ song, onEdit, onBack, onDuplicate, onDelete }: Props)
             <button className="btn btn--ghost btn--sm" onClick={() => setMergeStep(0)}>원래대로</button>
           )}
         </div>
-
-        {song.tempo ? (
-          <div className="ctrl meta">
-            <span className="chip">♩ {song.tempo}</span>
-          </div>
-        ) : null}
       </div>
 
       <ChordStrip sections={song.sections} semitones={fingeringOffset} rootKey={transposeNote(song.originalKey, fingeringOffset)}

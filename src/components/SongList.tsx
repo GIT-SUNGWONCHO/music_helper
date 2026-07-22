@@ -28,6 +28,7 @@ export function SongList({ songs, owner, onSwitchOwner, onOpen, onDelete, onNew,
   const [query, setQuery] = useState('')
   const [statusF, setStatusF] = useState<PracticeStatus[]>([])
   const [sortBy, setSortBy] = useState<SortBy>('recent')
+  const [sortSheetOpen, setSortSheetOpen] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
 
   useEffect(() => {
@@ -76,27 +77,48 @@ export function SongList({ songs, owner, onSwitchOwner, onOpen, onDelete, onNew,
       <input className="search" placeholder="제목·아티스트 검색"
         value={query} onChange={(e) => setQuery(e.target.value)} />
 
-      <div className="sort-row">
-        <span className="sort-row__label">정렬</span>
-        {SORT_OPTIONS.map((o) => (
-          <button key={o.value} type="button"
-            className={'sort-link' + (sortBy === o.value ? ' is-on' : '')}
-            onClick={() => setSortBy(o.value)}>{o.label}</button>
-        ))}
-      </div>
+      {sortSheetOpen && (
+        <div className="modal" onClick={() => setSortSheetOpen(false)}>
+          <div className="modal__card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal__head">
+              <strong>정렬</strong>
+              <button className="btn btn--icon btn--ghost" onClick={() => setSortSheetOpen(false)}>✕</button>
+            </div>
+            <div className="modal__body" style={{ gap: 2 }}>
+              {SORT_OPTIONS.map((o) => (
+                <button key={o.value} type="button"
+                  className={'sheet-option' + (sortBy === o.value ? ' is-on' : '')}
+                  onClick={() => { setSortBy(o.value); setSortSheetOpen(false) }}>
+                  {o.label}
+                  {sortBy === o.value && <span className="sheet-option__check">✓</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
-      <div className="status-filter">
-        <button className={'status-pill' + (statusF.length === 0 ? ' is-on' : '')} onClick={() => setStatusF([])}>
-          전체 <span className="status-pill__n">{songs.length}</span>
-        </button>
-        {PRACTICE_STATUSES.map((st) => (
-          <button key={st.value}
-            className={'status-pill' + (statusF.includes(st.value) ? ' is-on' : '')}
-            onClick={() => setStatusF((f) => toggleIn(f, st.value))}>
-            <span className={'status-dot status-dot--' + st.value} />
-            {st.label} <span className="status-pill__n">{statusCounts[st.value] ?? 0}</span>
+      <div className="filter-row">
+        <div className="status-filter">
+          <button className={'status-pill' + (statusF.length === 0 ? ' is-on' : '')} onClick={() => setStatusF([])}>
+            전체 <span className="status-pill__n">{songs.length}</span>
           </button>
-        ))}
+          {PRACTICE_STATUSES.map((st) => (
+            <button key={st.value}
+              className={'status-pill' + (statusF.includes(st.value) ? ' is-on' : '')}
+              onClick={() => setStatusF((f) => toggleIn(f, st.value))}>
+              <span className={'status-dot status-dot--' + st.value} />
+              {st.label} <span className="status-pill__n">{statusCounts[st.value] ?? 0}</span>
+            </button>
+          ))}
+        </div>
+
+        <button type="button" className="sort-trigger" onClick={() => setSortSheetOpen(true)}>
+          정렬 · {SORT_OPTIONS.find((o) => o.value === sortBy)?.label}
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
       </div>
 
       <div className="rows">
@@ -105,7 +127,7 @@ export function SongList({ songs, owner, onSwitchOwner, onOpen, onDelete, onNew,
             <button className="row" onClick={() => onOpen(s.id)}>
               <div className={'row__dot status-dot--' + s.status} title={PRACTICE_STATUSES.find((x) => x.value === s.status)?.label} />
               <div className="row__body">
-                <div className="row__title">{s.title}</div>
+                <div className="row__title">{s.title}{s.version && <span className="row__version"> ({s.version})</span>}</div>
                 <div className="row__artist">{s.artist || '—'}</div>
               </div>
               <span className="row__meta">{s.originalKey}</span>

@@ -6,6 +6,7 @@ create table if not exists songs (
   id text primary key,
   owner text not null check (owner in ('sungwon', 'friend')),
   title text not null,
+  version text,
   artist text not null default '',
   original_key text not null default 'C',
   tempo integer,
@@ -20,6 +21,9 @@ create table if not exists songs (
   created_at bigint not null,
   updated_at bigint not null
 );
+
+-- 기존 테이블에 이미 songs가 있다면(2026-07 이전 생성) 아래 한 줄만 SQL Editor에서 실행하면 됨:
+-- alter table songs add column if not exists version text;
 
 create index if not exists songs_owner_idx on songs (owner);
 

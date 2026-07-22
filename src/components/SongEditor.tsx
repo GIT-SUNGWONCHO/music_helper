@@ -234,6 +234,11 @@ export function SongEditor({ song, genMeta, onSave, onCancel, onDelete }: Props)
             <span>제목</span>
             <input value={draft.title} onChange={(e) => set('title', e.target.value)} />
           </label>
+          <label className="field field--version">
+            <span>버전 (선택)</span>
+            <input value={draft.version ?? ''} placeholder="예: 남키"
+              onChange={(e) => set('version', e.target.value || undefined)} />
+          </label>
         </div>
         <div className="form__row">
           <label className="field field--grow">
