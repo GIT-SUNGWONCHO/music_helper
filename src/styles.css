@@ -420,6 +420,8 @@ svg .dg-basefret { fill: var(--muted); font-size: 8px; text-anchor: end; }
 
 /* segmented status control in the editor */
 .seg { display: inline-flex; background: var(--bg-row); border: 1px solid var(--border-strong); border-radius: var(--r-sm); padding: 2px; gap: 2px; width: fit-content; }
+.seg--wrap { flex-wrap: wrap; width: auto; }
+.chord-library-grid { display: flex; flex-wrap: wrap; gap: 14px 12px; }
 .seg__btn {
   background: transparent; border: none; padding: 7px 15px; border-radius: 6px;
   font-size: 0.8rem; font-family: var(--font-mono); font-weight: 600; color: var(--muted); cursor: pointer; transition: all .12s;
@@ -453,6 +455,7 @@ svg .dg-basefret { fill: var(--muted); font-size: 8px; text-anchor: end; }
   width: 100%; max-width: 440px; background: var(--bg-card); border: 1px solid var(--border-strong);
   border-radius: var(--r-lg) var(--r-lg) 0 0; display: flex; flex-direction: column; max-height: 92vh;
 }
+.modal__card--wide { max-width: 720px; }
 .modal__head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-bottom: 1px solid var(--border); }
 .modal__head strong { font-family: var(--font-sans); font-size: 1rem; }
 .modal__body { padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
