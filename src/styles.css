@@ -101,16 +101,16 @@ body {
 /* ---------- library / list ---------- */
 .list { max-width: 640px; margin: 0 auto; padding: 44px 20px 96px; position: relative; min-height: 100%; }
 .app-header {
-  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 10px;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap;
   margin: -44px -20px 22px; padding: 20px 20px 15px;
   background: linear-gradient(180deg, var(--bg-elev), var(--bg)); border-bottom: 1px solid var(--border);
 }
 .app-header__brand {
   font-family: var(--font-display); font-weight: 400; font-size: 34px; letter-spacing: 2px;
-  line-height: 0.85; color: var(--text);
+  line-height: 0.85; color: var(--text); white-space: nowrap; flex: 0 0 auto;
 }
 .app-header__brand-dot { color: var(--accent); }
-.app-header__brand-row { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; }
+.app-header__brand-row { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; overflow: hidden; }
 .app-header__actions { display: flex; gap: 8px; flex: 0 0 auto; flex-wrap: nowrap; }
 
 .update-badge {
@@ -118,7 +118,9 @@ body {
   background: var(--bg-row); border: 1px solid var(--border); border-radius: 999px;
   padding: 3px 9px 3px 9px; margin-bottom: 4px; cursor: pointer;
   color: var(--muted); font-size: 0.68rem; font-family: var(--font-mono); letter-spacing: 0.02em;
+  flex: 0 1 auto; min-width: 0;
 }
+.update-badge__text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; max-width: 100%; }
 .update-badge:hover { color: var(--accent-soft); border-color: var(--accent-soft); }
 .update-badge__dot {
   position: absolute; top: -2px; right: -2px; width: 7px; height: 7px; border-radius: 50%;
@@ -612,6 +614,9 @@ svg .dg-basefret { fill: var(--muted); font-size: 8px; text-anchor: end; }
   .bars { --bpr: 2; }
   .toolbar { padding: 10px 12px; }
   .controls { gap: 8px 12px; }
+  .app-header { padding: 16px 16px 13px; }
+  .app-header__brand { font-size: 26px; }
+  .update-badge { font-size: 0.62rem; padding: 3px 7px; }
   .fab-group { right: 20px; }
   .sheet .bars .bar:nth-child(4n+3), .sheet .bars .bar:nth-child(4n+4) {
     background: color-mix(in srgb, var(--bg-elev) 55%, var(--bg-row));

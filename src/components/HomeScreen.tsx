@@ -57,7 +57,7 @@ export function HomeScreen({
         <div className="app-header__brand-row">
           <div className="app-header__brand">GENCHRD<span className="app-header__brand-dot">.</span></div>
           <button className="update-badge" onClick={openUpdates}>
-            v{currentVersion()}
+            <span className="update-badge__text">v{currentVersion()}</span>
             {unseenUpdate && <span className="update-badge__dot" />}
           </button>
         </div>
