@@ -101,13 +101,13 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
             </div>
           )}
           <label className="field">
-            <span>곡 제목</span>
+            <div className="field-group__title">곡 제목</div>
             <input value={title} autoFocus placeholder="예: Creep"
               onChange={(e) => setTitle(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && keyReady && !loading) run() }} />
           </label>
           <label className="field">
-            <span>아티스트</span>
+            <div className="field-group__title">아티스트</div>
             <input value={artist} placeholder="예: Radiohead"
               onChange={(e) => setArtist(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && keyReady && !loading) run() }} />
@@ -151,7 +151,7 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
           </div>
 
           <div className="field">
-            <span>코드 난이도</span>
+            <div className="field-group__title">코드 난이도</div>
             <div className="seg">
               {DIFFICULTIES.map((d) => (
                 <button key={d.value} type="button" title={d.desc}
@@ -163,7 +163,7 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
           </div>
 
           <label className="field">
-            <span>추가 요청사항 (선택)</span>
+            <div className="field-group__title">추가 요청사항 (선택)</div>
             <textarea rows={2} value={note} placeholder="예: 후렴구는 카포 3프렛 기준으로, 라이브 버전 코드로 써줘"
               onChange={(e) => setNote(e.target.value)} />
           </label>
