@@ -139,6 +139,20 @@ export function SongEditor({ song, genMeta, onSave, onCancel, onDelete }: Props)
       sections: d.sections.map((s) => (s.id === secId ? { ...s, bars: s.bars.filter((b) => b.id !== barId) } : s)),
     }))
   }
+  /** 이 마디 바로 뒤에 빈 마디 하나 삽입(마디 중간에 끼워넣기). */
+  function insertBarAfter(secId: string, barId: string) {
+    setDraft((d) => ({
+      ...d,
+      sections: d.sections.map((s) => {
+        if (s.id !== secId) return s
+        const idx = s.bars.findIndex((b) => b.id === barId)
+        if (idx === -1) return s
+        const bars = s.bars.slice()
+        bars.splice(idx + 1, 0, newBar())
+        return { ...s, bars }
+      }),
+    }))
+  }
   /** 전체 곡을 ±1반음 전조(모든 코드 이동 + 키 라벨 갱신). 코드명이 바뀌므로 핀 고정/숨김 목록도 같이 전조하고, 운지 선택은 초기화. */
   function transposeBy(semis: 1 | -1) {
     setDraft((d) => ({
@@ -324,17 +338,22 @@ export function SongEditor({ song, genMeta, onSave, onCancel, onDelete }: Props)
                 return (
                   <Fragment key={bar.id}>
                     <div className="bar bar--edit">
-                      <button className="icon-x bar__x" title="마디 삭제" onClick={() => removeBar(sec.id, bar.id)}>×</button>
-                      <ChordTagInput
-                        chords={bar.chords}
-                        onChange={(c) => patchBar(sec.id, bar.id, { chords: c })}
-                      />
-                      <input
-                        className="bar__lyric-input"
-                        value={bar.lyric}
-                        placeholder="가사"
-                        onChange={(e) => patchBar(sec.id, bar.id, { lyric: e.target.value })}
-                      />
+                      <div className="bar__content">
+                        <ChordTagInput
+                          chords={bar.chords}
+                          onChange={(c) => patchBar(sec.id, bar.id, { chords: c })}
+                        />
+                        <input
+                          className="bar__lyric-input"
+                          value={bar.lyric}
+                          placeholder="가사"
+                          onChange={(e) => patchBar(sec.id, bar.id, { lyric: e.target.value })}
+                        />
+                      </div>
+                      <button className="bar__x" title="마디 삭제" onClick={() => removeBar(sec.id, bar.id)}>×</button>
+                      <div className="bar__insert-rail">
+                        <button className="bar__insert-btn" title="이 뒤에 마디 삽입" onClick={() => insertBarAfter(sec.id, bar.id)}>+</button>
+                      </div>
                     </div>
                     {isRowEnd && (
                       <div className="bar-row-ops">

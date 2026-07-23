@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Song, SetList } from '../types'
 import { OWNERS, type Owner } from '../supabase'
 import { ChordLibraryModal } from './ChordLibraryModal'
+import { ChordColorModal } from './ChordColorModal'
 import { SongList } from './SongList'
 import { SetListHome } from './SetListHome'
 import { SetListDetail } from './SetListDetail'
@@ -38,6 +39,7 @@ export function HomeScreen({
   onToggleSongInSetList, onRenameSetList, onReorderSetList, onRemoveSongFromSetList,
 }: Props) {
   const [showChordLib, setShowChordLib] = useState(false)
+  const [showChordColor, setShowChordColor] = useState(false)
   const activeSetList = setlistId ? setlists.find((s) => s.id === setlistId) : undefined
 
   return (
@@ -46,6 +48,7 @@ export function HomeScreen({
         <div className="app-header__brand">GENCHRD<span className="app-header__brand-dot">.</span></div>
         <div className="app-header__actions">
           <button className="btn btn--ghost btn--sm" onClick={() => setShowChordLib(true)}>코드표</button>
+          <button className="btn btn--ghost btn--sm" onClick={() => setShowChordColor(true)}>코드색</button>
           <button className="btn btn--ghost btn--sm" onClick={onSettings}>설정</button>
         </div>
       </div>
@@ -68,6 +71,7 @@ export function HomeScreen({
       </div>
 
       {showChordLib && <ChordLibraryModal onClose={() => setShowChordLib(false)} />}
+      {showChordColor && <ChordColorModal owner={owner} onClose={() => setShowChordColor(false)} />}
 
       {tab === 'library' && (
         <SongList songs={songs} owner={owner} onOpen={onOpen} onDelete={onDelete} onNew={onNew} onGenerate={onGenerate}

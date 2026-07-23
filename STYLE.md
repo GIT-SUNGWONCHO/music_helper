@@ -12,7 +12,7 @@
 | `--accent-soft` | `color-mix(accent 65%, white)` | accent보다 밝은 파생값 — 강조 텍스트, hover 등 |
 | `--accent-dim` | `color-mix(accent 55%, black)` | accent보다 어두운 파생값 |
 | `--accent-ink` | `#1a120b` | accent 배경(꽉 찬 버튼) 위에 올라가는 텍스트색 |
-| `--chord` | `#a8583f` (톤 낮춘 주황/테라코타) | **코드명 전용.** accent와 같은 주황 계열이되 채도/명도를 낮춰 분리한 별도 토큰 — "클릭 가능"(accent, 쨍한 주황)과 "데이터"(chord, 차분한 주황)를 색상이 아니라 톤 차이로 구분. 나중에 사용자가 코드 색을 커스터마이징하는 기능(예: 파랑 배리에이션)을 넣을 때 이 토큰 하나만 바꾸면 됨 |
+| `--chord` | `#a8583f` (톤 낮춘 주황/테라코타), 기본값. **런타임에 owner별로 오버라이드됨** | **코드명 전용.** `src/chordColor.ts`(프리셋+커스텀 피커, `ChordColorModal.tsx`)가 owner별 localStorage 값을 읽어 `document.documentElement.style.setProperty('--chord', ...)`로 덮어씀. 설정(PIN)과 분리된 진입점(헤더 "코드색" 버튼) — 성원/민형 둘 다 비밀번호 없이 바로 바꿀 수 있음 |
 | `--teal` | `#3a9ca0` | AI 생성 관련 액션 전용(스파클 버튼 등). accent(주황)와 색상군 자체가 달라 항상 구분됨 |
 | `--amber` | `#d8a13a` | 연습상태 "연습중", 경고(`.notice--warn`) 등 |
 | `--st-want` / `--st-practicing` / `--st-done` | `#b8455f` / `var(--amber)` / `#4f9d6e` | 연습 상태 3종 색 |

@@ -15,6 +15,7 @@ import { PinPrompt } from './components/PinPrompt'
 import { OwnerPicker } from './components/OwnerPicker'
 import { HomeScreen, type HomeTab } from './components/HomeScreen'
 import { ConfirmModal } from './components/ConfirmModal'
+import { loadChordColor, applyChordColor } from './chordColor'
 
 type Modal = 'none' | 'generate' | 'settings' | 'pin'
 
@@ -58,6 +59,11 @@ export default function App() {
   const refresh = useCallback(async (o: Owner) => setSongs(await allSongs(o)), [])
   const refreshSetLists = useCallback(async (o: Owner) => setSetLists(await allSetLists(o)), [])
   const seedChecked = useRef<Set<Owner>>(new Set())
+
+  useEffect(() => {
+    if (!ownerChosen) return
+    applyChordColor(loadChordColor(owner))
+  }, [owner, ownerChosen])
 
   useEffect(() => {
     if (!supabaseReady) { setReady(true); return }
