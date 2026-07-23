@@ -11,13 +11,12 @@ import { SongView } from './components/SongView'
 import { SongEditor } from './components/SongEditor'
 import { SettingsModal } from './components/SettingsModal'
 import { GenerateModal } from './components/GenerateModal'
-import { PinPrompt } from './components/PinPrompt'
 import { OwnerPicker } from './components/OwnerPicker'
 import { HomeScreen, type HomeTab } from './components/HomeScreen'
 import { ConfirmModal } from './components/ConfirmModal'
 import { loadChordColor, applyChordColor } from './chordColor'
 
-type Modal = 'none' | 'generate' | 'settings' | 'pin'
+type Modal = 'none' | 'generate' | 'settings'
 
 const SETTINGS_UNLOCKED_KEY = 'mh.settings.unlocked'
 
@@ -54,6 +53,7 @@ export default function App() {
   const [genMeta, setGenMeta] = useState<Omit<GenerateResult, 'song'> | null>(null)
   const [generatedSong, setGeneratedSong] = useState<Song | null>(null)
   const [settingsUnlocked, setSettingsUnlocked] = useState(() => localStorage.getItem(SETTINGS_UNLOCKED_KEY) === '1')
+  const [settingsInitialTab, setSettingsInitialTab] = useState<'general' | 'admin'>('general')
   const [confirmState, setConfirmState] = useState<{ message: string; onConfirm: () => void } | null>(null)
 
   const refresh = useCallback(async (o: Owner) => setSongs(await allSongs(o)), [])
@@ -204,7 +204,7 @@ export default function App() {
           onDelete={(id) => handleDelete(id, { name: 'home', tab: screen.tab, setlistId: screen.setlistId })}
           onNew={handleNew} onGenerate={() => setModal('generate')}
           onImportSong={handleImportSong}
-          onSettings={() => setModal(settingsUnlocked ? 'settings' : 'pin')}
+          onSettings={() => { setSettingsInitialTab('general'); setModal('settings') }}
           setlists={setlists}
           onOpenSetList={(id) => setScreen({ name: 'home', tab: 'setlists', setlistId: id })}
           onCloseSetListDetail={() => setScreen({ name: 'home', tab: 'setlists' })}
@@ -231,20 +231,15 @@ export default function App() {
           onDelete={(id) => handleDelete(id, screen.from)} />
       )}
 
-      {modal === 'pin' && (
-        <PinPrompt
-          onClose={() => setModal('none')}
-          onSuccess={() => {
-            localStorage.setItem(SETTINGS_UNLOCKED_KEY, '1')
-            setSettingsUnlocked(true)
-            setModal('settings')
-          }}
-        />
+      {modal === 'settings' && (
+        <SettingsModal onClose={() => setModal('none')} owner={owner}
+          initialTab={settingsInitialTab}
+          unlocked={settingsUnlocked}
+          onUnlock={() => { localStorage.setItem(SETTINGS_UNLOCKED_KEY, '1'); setSettingsUnlocked(true) }} />
       )}
-      {modal === 'settings' && <SettingsModal onClose={() => setModal('none')} />}
       {modal === 'generate' && (
         <GenerateModal onClose={() => setModal('none')}
-          onOpenSettings={() => setModal(settingsUnlocked ? 'settings' : 'pin')}
+          onOpenSettings={() => { setSettingsInitialTab('admin'); setModal('settings') }}
           onGenerated={handleGenerated} />
       )}
 
