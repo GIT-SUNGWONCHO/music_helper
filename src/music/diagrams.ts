@@ -55,10 +55,12 @@ function dbSuffix(quality: string): string[] {
     '2': 'sus2',
   }
   if (alias[q]) return [alias[q]]
+  // "M"으로 쓴 메이저7 계열(M9, M11, M7b5, mM9 등)을 db suffix 표기(maj9, mmaj9 등)로 정규화
+  const normalized = q.replace(/^mM(?=[0-9])/, 'mmaj').replace(/^M(?=[0-9])/, 'maj')
   // otherwise assume the quality already matches a db suffix (7, m7, sus4, add9, 9, maj9, ...)
   // provide graceful fallbacks by stripping trailing extensions
-  const fallbacks = [q]
-  if (q.startsWith('m') && q !== 'major') fallbacks.push('m7', 'minor')
+  const fallbacks = normalized === q ? [q] : [normalized, q]
+  if (normalized.startsWith('m') && normalized !== 'major') fallbacks.push('m7', 'minor')
   else fallbacks.push('7', 'major')
   return fallbacks
 }
@@ -190,11 +192,11 @@ export function suffixesForRoot(root: string): string[] {
   return ['5', ...sorted]
 }
 
-/** 루트 + db suffix → 표시용 코드명 (major는 생략, minor는 m). */
+/** 루트 + db suffix → 표시용 코드명 (major는 생략, minor는 m, maj7 계열은 M7로 표기). */
 export function displayChordName(root: string, suffix: string): string {
   if (suffix === 'major') return root
   if (suffix === 'minor') return root + 'm'
-  return root + suffix
+  return root + suffix.replace(/maj/g, 'M')
 }
 
 /** A rough "is this hard for a beginner" heuristic to decide which chords to diagram by default. */
