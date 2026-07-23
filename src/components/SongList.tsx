@@ -3,6 +3,7 @@ import type { Song, PracticeStatus, SetList } from '../types'
 import { PRACTICE_STATUSES } from '../types'
 import type { Owner } from '../supabase'
 import { SetListPickerModal } from './SetListPickerModal'
+import { ImportSongModal } from './ImportSongModal'
 
 interface Props {
   songs: Song[]
@@ -11,6 +12,7 @@ interface Props {
   onDelete: (id: string) => void
   onNew: () => void
   onGenerate: () => void
+  onImportSong: (song: Song) => void
   setlists: SetList[]
   onToggleSongInSetList: (setlistId: string, songId: string) => void
   onCreateSetList: (name: string, songId?: string) => void
@@ -21,33 +23,41 @@ function toggleIn<T>(arr: T[], v: T): T[] {
 }
 
 type SortBy = 'recent' | 'title'
-const SORT_OPTIONS: { value: SortBy; label: string }[] = [
-  { value: 'recent', label: '최근순' },
-  { value: 'title', label: '제목순' },
+type SortDir = 'asc' | 'desc'
+type SortKey = 'recent-desc' | 'recent-asc' | 'title-asc' | 'title-desc'
+const SORT_OPTIONS: { key: SortKey; sortBy: SortBy; dir: SortDir; label: string }[] = [
+  { key: 'recent-desc', sortBy: 'recent', dir: 'desc', label: '최신순' },
+  { key: 'recent-asc', sortBy: 'recent', dir: 'asc', label: '오래된순' },
+  { key: 'title-asc', sortBy: 'title', dir: 'asc', label: '제목순 (가나다)' },
+  { key: 'title-desc', sortBy: 'title', dir: 'desc', label: '제목순 (역순)' },
 ]
 
-function loadSortBy(owner: Owner): SortBy {
+function loadSortKey(owner: Owner): SortKey {
   const v = localStorage.getItem('mh.sortBy.' + owner)
-  return v === 'title' || v === 'recent' ? v : 'recent'
+  // 이전 버전(방향 없이 recent/title만 저장)과 호환
+  if (v === 'recent') return 'recent-desc'
+  if (v === 'title') return 'title-asc'
+  return SORT_OPTIONS.some((o) => o.key === v) ? (v as SortKey) : 'recent-desc'
 }
 
 export function SongList({
-  songs, owner, onOpen, onDelete, onNew, onGenerate,
+  songs, owner, onOpen, onDelete, onNew, onGenerate, onImportSong,
   setlists, onToggleSongInSetList, onCreateSetList,
 }: Props) {
   const [query, setQuery] = useState('')
   const [statusF, setStatusF] = useState<PracticeStatus[]>([])
-  const [sortBy, setSortByState] = useState<SortBy>(() => loadSortBy(owner))
+  const [sortKey, setSortKeyState] = useState<SortKey>(() => loadSortKey(owner))
   const [sortSheetOpen, setSortSheetOpen] = useState(false)
 
-  useEffect(() => setSortByState(loadSortBy(owner)), [owner])
+  useEffect(() => setSortKeyState(loadSortKey(owner)), [owner])
 
-  function setSortBy(v: SortBy) {
-    setSortByState(v)
+  function setSortKey(v: SortKey) {
+    setSortKeyState(v)
     localStorage.setItem('mh.sortBy.' + owner, v)
   }
   const [pickerSong, setPickerSong] = useState<Song | null>(null)
   const [fabOpen, setFabOpen] = useState(false)
+  const [showImport, setShowImport] = useState(false)
 
   useEffect(() => {
     if (!fabOpen) return
@@ -69,10 +79,12 @@ export function SongList({
       if (!q) return true
       return s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q)
     })
-    return result.sort((a, b) =>
-      sortBy === 'title' ? a.title.localeCompare(b.title, 'ko') : b.updatedAt - a.updatedAt,
-    )
-  }, [songs, query, statusF, sortBy])
+    const opt = SORT_OPTIONS.find((o) => o.key === sortKey)!
+    return result.sort((a, b) => {
+      const cmp = opt.sortBy === 'title' ? a.title.localeCompare(b.title, 'ko') : a.updatedAt - b.updatedAt
+      return opt.dir === 'asc' ? cmp : -cmp
+    })
+  }, [songs, query, statusF, sortKey])
 
   return (
     <>
@@ -88,11 +100,11 @@ export function SongList({
             </div>
             <div className="modal__body" style={{ gap: 2 }}>
               {SORT_OPTIONS.map((o) => (
-                <button key={o.value} type="button"
-                  className={'sheet-option' + (sortBy === o.value ? ' is-on' : '')}
-                  onClick={() => { setSortBy(o.value); setSortSheetOpen(false) }}>
+                <button key={o.key} type="button"
+                  className={'sheet-option' + (sortKey === o.key ? ' is-on' : '')}
+                  onClick={() => { setSortKey(o.key); setSortSheetOpen(false) }}>
                   {o.label}
-                  {sortBy === o.value && <span className="sheet-option__check">✓</span>}
+                  {sortKey === o.key && <span className="sheet-option__check">✓</span>}
                 </button>
               ))}
             </div>
@@ -116,7 +128,7 @@ export function SongList({
         </div>
 
         <button type="button" className="sort-trigger" onClick={() => setSortSheetOpen(true)}>
-          정렬 · {SORT_OPTIONS.find((o) => o.value === sortBy)?.label}
+          정렬 · {SORT_OPTIONS.find((o) => o.key === sortKey)?.label}
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 9l6 6 6-6" />
           </svg>
@@ -151,6 +163,10 @@ export function SongList({
           onClose={() => setPickerSong(null)} />
       )}
 
+      {showImport && (
+        <ImportSongModal owner={owner} onImport={onImportSong} onClose={() => setShowImport(false)} />
+      )}
+
       <div className="fab-group" onClick={(e) => e.stopPropagation()}>
         {fabOpen && (
           <div className="fab-actions">
@@ -165,6 +181,12 @@ export function SongList({
                 <path d="M12 5v14M5 12h14" />
               </svg>
               직접 만들기
+            </button>
+            <button className="fab-action fab-action--import" onClick={() => { setFabOpen(false); setShowImport(true) }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3v12M7 10l5 5 5-5M4 19h16" />
+              </svg>
+              다른 사람 악보 가져오기
             </button>
           </div>
         )}

@@ -137,6 +137,11 @@ export default function App() {
     setGeneratedSong(song)
     setScreen({ name: 'edit', id: song.id, isNew: true, from: LIBRARY_HOME })
   }
+  async function handleImportSong(source: Song) {
+    const { id, createdAt, updatedAt, ...rest } = source
+    await saveSong(newSong(rest), owner)
+    await refresh(owner)
+  }
 
   async function handleCreateSetList(name: string, songId?: string) {
     await saveSetList(newSetList(name, songId ? [songId] : []), owner)
@@ -198,6 +203,7 @@ export default function App() {
           onOpen={(id) => setScreen({ name: 'view', id, from: { name: 'home', tab: 'library' } })}
           onDelete={(id) => handleDelete(id, { name: 'home', tab: screen.tab, setlistId: screen.setlistId })}
           onNew={handleNew} onGenerate={() => setModal('generate')}
+          onImportSong={handleImportSong}
           onSettings={() => setModal(settingsUnlocked ? 'settings' : 'pin')}
           setlists={setlists}
           onOpenSetList={(id) => setScreen({ name: 'home', tab: 'setlists', setlistId: id })}

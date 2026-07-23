@@ -20,6 +20,7 @@ interface Props {
   onDelete: (id: string) => void
   onNew: () => void
   onGenerate: () => void
+  onImportSong: (song: Song) => void
   onSettings: () => void
   setlists: SetList[]
   onOpenSetList: (id: string) => void
@@ -34,7 +35,7 @@ interface Props {
 }
 
 export function HomeScreen({
-  tab, setlistId, onTabChange, songs, owner, onSwitchOwner, onOpen, onDelete, onNew, onGenerate, onSettings,
+  tab, setlistId, onTabChange, songs, owner, onSwitchOwner, onOpen, onDelete, onNew, onGenerate, onImportSong, onSettings,
   setlists, onOpenSetList, onCloseSetListDetail, onOpenSetlistSong, onCreateSetList, onDeleteSetList,
   onToggleSongInSetList, onRenameSetList, onReorderSetList, onRemoveSongFromSetList,
 }: Props) {
@@ -75,6 +76,7 @@ export function HomeScreen({
 
       {tab === 'library' && (
         <SongList songs={songs} owner={owner} onOpen={onOpen} onDelete={onDelete} onNew={onNew} onGenerate={onGenerate}
+          onImportSong={onImportSong}
           setlists={setlists} onToggleSongInSetList={onToggleSongInSetList} onCreateSetList={onCreateSetList} />
       )}
       {tab === 'setlists' && (

@@ -201,12 +201,12 @@ body {
 .fab.is-open { background: var(--bg-elev); color: var(--text); border: 1px solid var(--border-strong); box-shadow: none; }
 
 .scroll-fab {
-  position: fixed; right: max(20px, calc((100vw - 640px) / 2 + 20px)); bottom: 28px; z-index: 8;
+  position: fixed; right: max(20px, calc((100vw - 640px) / 2 + 20px)); bottom: 48px; z-index: 8;
   width: 52px; height: 52px; border-radius: var(--r-lg);
   display: flex; align-items: center; justify-content: center;
   background: var(--bg-elev); border: 1px solid var(--border-strong); cursor: pointer;
   color: var(--accent-soft); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
-  opacity: 0.5; transition: opacity .15s, border-color .15s, color .15s;
+  opacity: 0.75; transition: opacity .15s, border-color .15s, color .15s;
 }
 .scroll-fab:hover, .scroll-fab:focus-visible, .scroll-fab:active { opacity: 1; border-color: var(--accent-soft); color: var(--accent); }
 .scroll-fab:active { transform: translateY(1px); }
