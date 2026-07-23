@@ -164,7 +164,7 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
 
           <label className="field">
             <div className="field-group__title">추가 요청사항 (선택)</div>
-            <textarea rows={2} value={note} placeholder="예: 후렴구는 카포 3프렛 기준으로, 라이브 버전 코드로 써줘"
+            <textarea rows={2} value={note} placeholder="예: Dadd9는 Dsus2로, 도돌이표는 마디로 풀어서 써줘"
               onChange={(e) => setNote(e.target.value)} />
           </label>
 
