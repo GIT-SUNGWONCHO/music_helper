@@ -426,13 +426,6 @@ svg .dg-basefret { fill: var(--muted); font-size: 8px; text-anchor: end; }
 .bar__chord-input::placeholder, .bar__lyric-input::placeholder { color: var(--faint); font-weight: 400; }
 .bar__lyric-input { font-size: 0.9em; font-family: var(--font-sans); }
 .bar__chord-input:focus, .bar__lyric-input:focus { outline: none; background: var(--bg-elev); }
-.bar--add {
-  border-right: 1px solid var(--border-strong); border-bottom: 1px solid var(--border-strong);
-  background: transparent; color: var(--muted); cursor: pointer; font-size: 0.8rem; font-family: var(--font-mono);
-  display: flex; align-items: center; justify-content: center; min-height: 54px;
-}
-.bar--add:hover { background: var(--bg-row); color: var(--accent-soft); border-color: var(--accent); }
-.bar--add:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .bar-row-ops {
   grid-column: 1 / -1;
   display: flex; align-items: center; gap: 6px; padding: 4px 2px 12px;

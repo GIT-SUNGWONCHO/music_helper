@@ -127,12 +127,6 @@ export function SongEditor({ song, genMeta, onSave, onCancel, onDelete }: Props)
       ),
     }))
   }
-  function addBar(secId: string) {
-    setDraft((d) => ({
-      ...d,
-      sections: d.sections.map((s) => (s.id === secId ? { ...s, bars: [...s.bars, newBar()] } : s)),
-    }))
-  }
   function removeBar(secId: string, barId: string) {
     setDraft((d) => ({
       ...d,
@@ -370,7 +364,6 @@ export function SongEditor({ song, genMeta, onSave, onCancel, onDelete }: Props)
                   </Fragment>
                 )
               })}
-              <button className="bar bar--add" onClick={() => addBar(sec.id)}>+ 마디</button>
             </div>
           </section>
         ))}
