@@ -46,7 +46,7 @@ SELF-CHECK before output: Did I write a plain major/minor where the original use
     'Arrangement: ENRICHED. Start from the original chord progression and add tasteful color: maj7, add9, sus2, passing chords, richer voicings. Stay in the same key and feel — do NOT use jazz or extended chords (no 9th, 11th, 13th, b13, dim, aug).',
 }
 
-function buildPrompt(title: string, artist: string, difficulty: Difficulty, tool: GeminiTool, refUrl?: string): string {
+function buildPrompt(title: string, artist: string, difficulty: Difficulty, tool: GeminiTool, refUrl?: string, userNote?: string): string {
   const who = artist ? `"${title}" by ${artist}` : `"${title}"`
   let source: string
   if (tool === 'image') {
@@ -74,7 +74,7 @@ ACCURACY RULES — top priority, NEVER invent:
   - "confidence": "high" (I know this exact recording/chart well) or "medium" (I know the song but some details may differ).
   - "basis": one short Korean sentence — what this chart is based on (참고 링크 / 웹 검색 결과 / 학습 지식 등 구체적으로).
 - If your honest confidence is lower than "medium", output the unknown JSON above instead of a chart.
-
+${userNote ? `\nUSER REQUEST — follow this as long as it doesn't conflict with the accuracy rules above: ${userNote}\n` : ''}
 Rules:
 - ${DIFFICULTY_RULE[difficulty]}
 - Write chords the way a guitarist actually plays them (e.g. C, Am7, G/B, FM7, Dsus4). Do NOT use a capo — write the sounding chords in a comfortable key.
@@ -167,11 +167,12 @@ async function callGemini(
   difficulty: Difficulty,
   refUrl?: string,
   images?: RefImage[],
+  userNote?: string,
 ): Promise<CallResult> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
     s.model,
   )}:generateContent?key=${encodeURIComponent(s.apiKey)}`
-  const reqParts: Record<string, unknown>[] = [{ text: buildPrompt(title, artist, difficulty, tool, refUrl) }]
+  const reqParts: Record<string, unknown>[] = [{ text: buildPrompt(title, artist, difficulty, tool, refUrl, userNote) }]
   if (tool === 'image' && images) {
     for (const img of images) reqParts.push({ inline_data: { mime_type: img.mimeType, data: img.data } })
   }
@@ -294,6 +295,7 @@ export async function generateChart(
   difficulty: Difficulty = 'original',
   refUrl?: string,
   refImages?: RefImage[],
+  userNote?: string,
 ): Promise<GenerateResult> {
   if (!settings.apiKey.trim()) throw new Error('먼저 설정에서 Gemini API 키를 입력하세요.')
   if (settings.provider !== 'gemini') throw new Error('현재는 Gemini만 지원합니다.')
@@ -302,19 +304,20 @@ export async function generateChart(
   const a = artist.trim()
   const ref = refUrl?.trim() || undefined
   const imgs = refImages && refImages.length > 0 ? refImages : undefined
+  const note = userNote?.trim() || undefined
   let result: CallResult
   if (imgs) {
     // 참고 이미지 모드: 첨부 악보 이미지를 정답 기준으로 전사
-    result = await callGemini(t, a, settings, 'image', difficulty, undefined, imgs)
+    result = await callGemini(t, a, settings, 'image', difficulty, undefined, imgs, note)
   } else if (ref) {
     // 참고 링크 모드: url_context로 페이지를 읽어 정답 기준으로 사용
-    result = await callGemini(t, a, settings, 'url', difficulty, ref)
+    result = await callGemini(t, a, settings, 'url', difficulty, ref, undefined, note)
   } else {
     try {
-      result = await callGemini(t, a, settings, 'search', difficulty)
+      result = await callGemini(t, a, settings, 'search', difficulty, undefined, undefined, note)
     } catch (e) {
       console.warn('[MusicHelper] 검색(그라운딩) 호출 실패 — 검색 없이 재시도. 원인:', (e as Error).message)
-      result = await callGemini(t, a, settings, 'none', difficulty)
+      result = await callGemini(t, a, settings, 'none', difficulty, undefined, undefined, note)
     }
   }
   // 과금 기준 출력 = 전체 - 입력 (thinking 토큰 포함)

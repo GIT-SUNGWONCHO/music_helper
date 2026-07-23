@@ -362,12 +362,14 @@ svg .dg-basefret { fill: var(--muted); font-size: 8px; text-anchor: end; }
 .field--narrow input { width: 64px; }
 .field--version { flex: 0 0 140px; }
 .field span { color: var(--muted); font-size: 0.72rem; font-family: var(--font-mono); letter-spacing: 0.04em; }
-.field input, .field select, .search, .text-input {
+.field-group__title { font-family: var(--font-sans); font-weight: 700; font-size: 0.92rem; color: var(--text); }
+.field input, .field select, .field textarea, .search, .text-input {
   background: var(--bg-row); border: 1px solid var(--border-strong); border-radius: var(--r-sm);
   padding: 9px 11px; color: var(--text); font-size: 0.9rem; font-family: var(--font-sans);
 }
-.field input::placeholder, .field select::placeholder, .search::placeholder, .text-input::placeholder { color: var(--faint); }
-.field input:focus-visible, .field select:focus-visible, .search:focus-visible, .text-input:focus-visible {
+.field textarea { resize: vertical; min-height: 52px; font-family: var(--font-sans); }
+.field input::placeholder, .field select::placeholder, .field textarea::placeholder, .search::placeholder, .text-input::placeholder { color: var(--faint); }
+.field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible, .search:focus-visible, .text-input:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent;
 }
 

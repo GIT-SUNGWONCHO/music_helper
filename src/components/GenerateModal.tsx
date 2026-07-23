@@ -37,6 +37,7 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
   const [title, setTitle] = useState('')
   const [artist, setArtist] = useState('')
   const [refUrl, setRefUrl] = useState('')
+  const [note, setNote] = useState('')
   const [images, setImages] = useState<PickedImage[]>([])
   const [difficulty, setDifficulty] = useState<Difficulty>('original')
   const [loading, setLoading] = useState(false)
@@ -69,7 +70,7 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
     setLoading(true)
     try {
       const refImages: RefImage[] = images.map((i) => ({ mimeType: i.mimeType, data: i.data }))
-      const result = await generateChart(title, artist, loadSettings(), difficulty, refUrl, refImages)
+      const result = await generateChart(title, artist, loadSettings(), difficulty, refUrl, refImages, note.trim() || undefined)
       onGenerated(result)
     } catch (e) {
       if (e instanceof UnknownSongError) setUnknownReason(e.message)
@@ -113,8 +114,10 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
           </label>
 
           <div className="field">
-            <span>참고 악보 (선택)</span>
+            <div className="field-group__title">참고 악보 (선택)</div>
             <p className="hint" style={{ padding: '0 0 6px' }}>정확도를 높이려면 악보 이미지나 링크를 넣으세요.</p>
+
+            <span>이미지</span>
             <div className="ref-images">
               {images.map((img, i) => (
                 <div className="ref-thumb" key={i}>
@@ -130,7 +133,9 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
                 </label>
               )}
             </div>
-            <input value={refUrl} placeholder="또는 코드 악보 페이지 주소 https://…"
+
+            <span>또는 링크</span>
+            <input value={refUrl} placeholder="코드 악보 페이지 주소 https://…"
               disabled={images.length > 0}
               onChange={(e) => setRefUrl(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && keyReady && !loading) run() }} />
@@ -156,6 +161,12 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
             </div>
             <div className="diff-desc">{DIFFICULTIES.find((d) => d.value === difficulty)?.desc}</div>
           </div>
+
+          <label className="field">
+            <span>추가 요청사항 (선택)</span>
+            <textarea rows={2} value={note} placeholder="예: 후렴구는 카포 3프렛 기준으로, 라이브 버전 코드로 써줘"
+              onChange={(e) => setNote(e.target.value)} />
+          </label>
 
           {loading && <div className="notice notice--busy">악보 생성 중… (10~30초)</div>}
           {error && <div className="notice notice--error">{error}</div>}
