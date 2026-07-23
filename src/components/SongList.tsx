@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react'
 import type { Song, PracticeStatus, SetList } from '../types'
 import { PRACTICE_STATUSES } from '../types'
-import type { Owner } from '../supabase'
+import { OWNERS, type Owner } from '../supabase'
 import { SetListPickerModal } from './SetListPickerModal'
 
 interface Props {
@@ -132,6 +132,9 @@ export function SongList({
                 <div className="row__title">{s.title}{s.version && <span className="row__version"> ({s.version})</span>}</div>
                 <div className="row__artist">{s.artist || '—'}</div>
               </div>
+              {s.owner && s.owner !== owner && (
+                <span className="chip row__owner-tag">{OWNERS.find((o) => o.value === s.owner)?.label}</span>
+              )}
             </button>
             <button className="row__add" title="셋리스트에 담기" onClick={() => setPickerSong(s)}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

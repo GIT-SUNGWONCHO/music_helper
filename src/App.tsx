@@ -56,9 +56,9 @@ export default function App() {
   const [settingsUnlocked, setSettingsUnlocked] = useState(() => localStorage.getItem(SETTINGS_UNLOCKED_KEY) === '1')
   const [confirmState, setConfirmState] = useState<{ message: string; onConfirm: () => void } | null>(null)
 
-  const refresh = useCallback(async (o: Owner) => setSongs(await allSongs(o)), [])
+  const refresh = useCallback(async () => setSongs(await allSongs()), [])
   const refreshSetLists = useCallback(async (o: Owner) => setSetLists(await allSetLists(o)), [])
-  const seedChecked = useRef<Set<Owner>>(new Set())
+  const seeded = useRef(false)
 
   useEffect(() => {
     if (!ownerChosen) return
@@ -71,13 +71,13 @@ export default function App() {
     let cancelled = false
     ;(async () => {
       setReady(false)
-      if (!seedChecked.current.has(owner)) {
-        seedChecked.current.add(owner)
-        const count = await countSongs(owner)
+      if (!seeded.current) {
+        seeded.current = true
+        const count = await countSongs()
         if (count === 0) await bulkSaveSongs(seedSongs(), owner)
       }
       if (cancelled) return
-      await refresh(owner)
+      await refresh()
       await refreshSetLists(owner)
       setReady(true)
     })()
@@ -98,8 +98,8 @@ export default function App() {
   const current = (id: string) => songs.find((s) => s.id === id) ?? (generatedSong?.id === id ? generatedSong : undefined)
 
   async function handleSave(song: Song, from: HomeState) {
-    await saveSong(song, owner)
-    await refresh(owner)
+    await saveSong({ ...song, owner: song.owner ?? owner })
+    await refresh()
     setGeneratedSong(null)
     setGenMeta(null)
     setScreen({ name: 'view', id: song.id, from })
@@ -115,26 +115,26 @@ export default function App() {
           return
         }
         await deleteSong(id)
-        await refresh(owner)
+        await refresh()
         setScreen(from)
       },
     })
   }
   function handleNew() {
-    const s = newSong()
+    const s = newSong({ owner })
     setGeneratedSong(s)
     setScreen({ name: 'edit', id: s.id, isNew: true, from: LIBRARY_HOME })
   }
   function handleDuplicate(source: Song, from: HomeState) {
     const { id, createdAt, updatedAt, ...rest } = source
-    const copy = newSong({ ...rest, title: rest.title + ' (복제)' })
+    const copy = newSong({ ...rest, owner, title: rest.title + ' (복제)' })
     setGeneratedSong(copy)
     setScreen({ name: 'edit', id: copy.id, isNew: true, from })
   }
   async function handleGenerated({ song, ...meta }: GenerateResult) {
     setModal('none')
     setGenMeta(meta)
-    setGeneratedSong(song)
+    setGeneratedSong({ ...song, owner })
     setScreen({ name: 'edit', id: song.id, isNew: true, from: LIBRARY_HOME })
   }
 

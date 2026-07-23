@@ -137,6 +137,7 @@ body {
 .row__title { font-size: 14.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row__version { font-size: 0.85em; font-weight: 400; color: var(--muted); }
 .row__artist { font-size: 11.5px; color: var(--muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row__owner-tag { flex: none; padding: 2px 8px; font-size: 0.68rem; }
 .row__del { flex: none; }
 .row__add {
   flex: none; background: none; border: none; cursor: pointer; display: flex;
