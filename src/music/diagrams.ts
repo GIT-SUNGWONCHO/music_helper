@@ -170,12 +170,24 @@ export function getDiagram(token: string, positionIndex = 0): DiagramResult | nu
   }
 }
 
-/** 루트 음의 코드 종류(suffix) 목록. chords-db 보유 목록 + 직접 계산하는 파워코드(5). */
+// 자주 쓰는 코드 종류를 앞쪽에 두기 위한 우선순위(명시 안 된 종류는 뒤로, 서로간 원래 순서는 유지).
+const SUFFIX_PRIORITY = [
+  'major', 'minor', '7', 'm7', 'maj7', 'sus2', 'sus4', 'add9', '6', 'm6',
+  '9', 'm9', 'maj9', 'dim', 'aug', '69', 'm69', '7sus4', 'm11', 'maj11',
+]
+
+/** 루트 음의 코드 종류(suffix) 목록. chords-db 보유 목록 + 직접 계산하는 파워코드(5).
+ *  흔히 쓰는 종류(메이저/마이너/7th/sus 등)가 앞쪽에 오도록 정렬. */
 export function suffixesForRoot(root: string): string[] {
   const key = dbRootKey(root)
   if (!key) return []
   const dbSuffixes = (db.chords[key] ?? []).filter((e) => e.positions.length > 0).map((e) => e.suffix)
-  return ['5', ...dbSuffixes]
+  const rank = (s: string) => {
+    const i = SUFFIX_PRIORITY.indexOf(s)
+    return i === -1 ? SUFFIX_PRIORITY.length : i
+  }
+  const sorted = [...dbSuffixes].sort((a, b) => rank(a) - rank(b))
+  return ['5', ...sorted]
 }
 
 /** 루트 + db suffix → 표시용 코드명 (major는 생략, minor는 m). */

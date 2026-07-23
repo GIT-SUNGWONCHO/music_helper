@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { Section } from '../types'
-import { collectChords, chordUsageCounts } from '../music/song'
+import { collectChords } from '../music/song'
 import { transposeChord, parseChord, NOTE_NAMES } from '../music/chords'
 import { isHardChord, getPositions, suffixesForRoot, displayChordName } from '../music/diagrams'
 import { ChordDiagram } from './ChordDiagram'
@@ -45,9 +45,7 @@ export function ChordStrip({
     }
     // 곡의 으뜸음 코드는 난이도와 무관하게 항상 포함(실제로 쓰였을 때만)
     if (rootKey && all.includes(rootKey)) hardSet.add(rootKey)
-    // 자주 쓰는 코드가 앞쪽에 오도록 등장 횟수 내림차순 정렬(동률이면 처음 나온 순서 유지)
-    const counts = chordUsageCounts(sections, semitones)
-    const auto = all.filter((c) => hardSet.has(c)).sort((a, b) => (counts[b] ?? 0) - (counts[a] ?? 0))
+    const auto = all.filter((c) => hardSet.has(c))
     const merged = [...auto]
     for (const p of pinned) {
       const t = transposeChord(p, semitones)

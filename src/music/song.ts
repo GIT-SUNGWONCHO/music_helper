@@ -102,17 +102,3 @@ export function collectChords(sections: Section[], semitones: number): string[] 
   }
   return out
 }
-
-/** 코드별 등장 횟수(전조 반영) — 코드표에서 자주 쓰는 코드를 앞쪽에 두는 정렬 기준. */
-export function chordUsageCounts(sections: Section[], semitones: number): Record<string, number> {
-  const counts: Record<string, number> = {}
-  for (const sec of sections) {
-    for (const bar of sec.bars) {
-      for (const raw of bar.chords) {
-        const c = transposeChord(raw, semitones)
-        counts[c] = (counts[c] ?? 0) + 1
-      }
-    }
-  }
-  return counts
-}
