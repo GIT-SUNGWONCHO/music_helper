@@ -582,10 +582,11 @@ svg .dg-basefret { fill: var(--muted); font-size: 8px; text-anchor: end; }
 .input-row input { flex: 1; min-width: 0; }
 
 .notice {
-  display: flex; align-items: center; gap: 10px; justify-content: space-between; flex-wrap: wrap;
   background: var(--bg-row); border: 1px solid var(--border-strong); border-radius: var(--r-sm);
   padding: 10px 12px; font-size: 0.84rem; color: var(--muted); font-family: var(--font-sans);
+  line-height: 1.5;
 }
+.notice--row { display: flex; align-items: center; gap: 10px; justify-content: space-between; flex-wrap: wrap; }
 .notice--busy { color: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 30%, var(--bg)); }
 .notice--error { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, var(--bg)); background: color-mix(in srgb, var(--danger) 8%, var(--bg)); }
 .notice--warn { color: var(--amber); border-color: color-mix(in srgb, var(--amber) 35%, var(--bg)); background: color-mix(in srgb, var(--amber) 8%, var(--bg)); }

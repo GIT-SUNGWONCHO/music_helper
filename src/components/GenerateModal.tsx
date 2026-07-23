@@ -94,7 +94,7 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
 
         <div className="modal__body">
           {!keyReady && (
-            <div className="notice">
+            <div className="notice notice--row">
               Gemini API 키가 필요합니다.
               <button className="btn btn--sm" onClick={onOpenSettings}>설정 열기</button>
             </div>
