@@ -3,9 +3,11 @@ import type { Song, SetList } from '../types'
 import { OWNERS, type Owner } from '../supabase'
 import { ChordLibraryModal } from './ChordLibraryModal'
 import { ChordColorModal } from './ChordColorModal'
+import { UpdateNotesModal } from './UpdateNotesModal'
 import { SongList } from './SongList'
 import { SetListHome } from './SetListHome'
 import { SetListDetail } from './SetListDetail'
+import { currentVersion, hasUnseenUpdate, markUpdatesSeen } from '../updates'
 
 export type HomeTab = 'library' | 'setlists'
 
@@ -41,12 +43,26 @@ export function HomeScreen({
 }: Props) {
   const [showChordLib, setShowChordLib] = useState(false)
   const [showChordColor, setShowChordColor] = useState(false)
+  const [showUpdates, setShowUpdates] = useState(false)
+  const [unseenUpdate, setUnseenUpdate] = useState(hasUnseenUpdate)
   const activeSetList = setlistId ? setlists.find((s) => s.id === setlistId) : undefined
+
+  function openUpdates() {
+    setShowUpdates(true)
+    markUpdatesSeen()
+    setUnseenUpdate(false)
+  }
 
   return (
     <div className="list">
       <div className="app-header">
-        <div className="app-header__brand">GENCHRD<span className="app-header__brand-dot">.</span></div>
+        <div className="app-header__brand-row">
+          <div className="app-header__brand">GENCHRD<span className="app-header__brand-dot">.</span></div>
+          <button className="update-badge" onClick={openUpdates}>
+            v{currentVersion()}
+            {unseenUpdate && <span className="update-badge__dot" />}
+          </button>
+        </div>
         <div className="app-header__actions">
           <button className="btn btn--ghost btn--sm" onClick={() => setShowChordLib(true)}>코드표</button>
           <button className="btn btn--ghost btn--sm" onClick={() => setShowChordColor(true)}>코드색</button>
@@ -73,6 +89,7 @@ export function HomeScreen({
 
       {showChordLib && <ChordLibraryModal onClose={() => setShowChordLib(false)} />}
       {showChordColor && <ChordColorModal owner={owner} onClose={() => setShowChordColor(false)} />}
+      {showUpdates && <UpdateNotesModal onClose={() => setShowUpdates(false)} />}
 
       {tab === 'library' && (
         <SongList songs={songs} owner={owner} onOpen={onOpen} onDelete={onDelete} onNew={onNew} onGenerate={onGenerate}
