@@ -4,11 +4,13 @@ import { OWNERS, type Owner } from '../supabase'
 import { ChordLibraryModal } from './ChordLibraryModal'
 import { SongList } from './SongList'
 import { SetListHome } from './SetListHome'
+import { SetListDetail } from './SetListDetail'
 
 export type HomeTab = 'library' | 'setlists'
 
 interface Props {
   tab: HomeTab
+  setlistId?: string
   onTabChange: (tab: HomeTab) => void
   songs: Song[]
   owner: Owner
@@ -20,16 +22,23 @@ interface Props {
   onSettings: () => void
   setlists: SetList[]
   onOpenSetList: (id: string) => void
+  onCloseSetListDetail: () => void
+  onOpenSetlistSong: (id: string) => void
   onCreateSetList: (name: string, songId?: string) => void
   onDeleteSetList: (id: string) => void
   onToggleSongInSetList: (setlistId: string, songId: string) => void
+  onRenameSetList: (id: string, name: string) => void
+  onReorderSetList: (id: string, songIds: string[]) => void
+  onRemoveSongFromSetList: (setlistId: string, songId: string) => void
 }
 
 export function HomeScreen({
-  tab, onTabChange, songs, owner, onSwitchOwner, onOpen, onDelete, onNew, onGenerate, onSettings,
-  setlists, onOpenSetList, onCreateSetList, onDeleteSetList, onToggleSongInSetList,
+  tab, setlistId, onTabChange, songs, owner, onSwitchOwner, onOpen, onDelete, onNew, onGenerate, onSettings,
+  setlists, onOpenSetList, onCloseSetListDetail, onOpenSetlistSong, onCreateSetList, onDeleteSetList,
+  onToggleSongInSetList, onRenameSetList, onReorderSetList, onRemoveSongFromSetList,
 }: Props) {
   const [showChordLib, setShowChordLib] = useState(false)
+  const activeSetList = setlistId ? setlists.find((s) => s.id === setlistId) : undefined
 
   return (
     <div className="list">
@@ -61,11 +70,21 @@ export function HomeScreen({
       {showChordLib && <ChordLibraryModal onClose={() => setShowChordLib(false)} />}
 
       {tab === 'library' && (
-        <SongList songs={songs} onOpen={onOpen} onDelete={onDelete} onNew={onNew} onGenerate={onGenerate}
+        <SongList songs={songs} owner={owner} onOpen={onOpen} onDelete={onDelete} onNew={onNew} onGenerate={onGenerate}
           setlists={setlists} onToggleSongInSetList={onToggleSongInSetList} onCreateSetList={onCreateSetList} />
       )}
       {tab === 'setlists' && (
-        <SetListHome setlists={setlists} onOpen={onOpenSetList} onCreate={onCreateSetList} onDelete={onDeleteSetList} />
+        activeSetList ? (
+          <SetListDetail setlist={activeSetList} songs={songs}
+            onBack={onCloseSetListDetail}
+            onOpenSong={onOpenSetlistSong}
+            onRename={(name) => onRenameSetList(activeSetList.id, name)}
+            onReorder={(songIds) => onReorderSetList(activeSetList.id, songIds)}
+            onRemoveSong={(songId) => onRemoveSongFromSetList(activeSetList.id, songId)}
+            onDelete={() => onDeleteSetList(activeSetList.id)} />
+        ) : (
+          <SetListHome setlists={setlists} onOpen={onOpenSetList} onCreate={onCreateSetList} onDelete={onDeleteSetList} />
+        )
       )}
     </div>
   )

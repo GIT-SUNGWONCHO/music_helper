@@ -208,10 +208,11 @@ export function SongEditor({ song, genMeta, onSave, onCancel, onDelete }: Props)
   }
 
   return (
-    <div className="page editor">
+    <div className="page">
       <div className="toolbar">
         <button className="btn" onClick={onCancel}>취소</button>
         <div className="toolbar__title"><strong>악보 편집</strong></div>
+        <button className="btn btn--ghost btn--danger" onClick={() => onDelete(draft.id)}>삭제</button>
         <button className="btn btn--primary" onClick={() => onSave(draft)}>저장</button>
       </div>
 
@@ -225,7 +226,10 @@ export function SongEditor({ song, genMeta, onSave, onCancel, onDelete }: Props)
                 type="button"
                 className={'seg__btn seg__btn--' + st.value + (draft.status === st.value ? ' is-on' : '')}
                 onClick={() => set('status', st.value)}
-              >{st.label}</button>
+              >
+                <span className={'status-dot status-dot--' + st.value} />
+                {st.label}
+              </button>
             ))}
           </div>
         </div>
@@ -320,7 +324,7 @@ export function SongEditor({ song, genMeta, onSave, onCancel, onDelete }: Props)
                 return (
                   <Fragment key={bar.id}>
                     <div className="bar bar--edit">
-                      <button className="bar__x" title="마디 삭제" onClick={() => removeBar(sec.id, bar.id)}>×</button>
+                      <button className="icon-x bar__x" title="마디 삭제" onClick={() => removeBar(sec.id, bar.id)}>×</button>
                       <ChordTagInput
                         chords={bar.chords}
                         onChange={(c) => patchBar(sec.id, bar.id, { chords: c })}
@@ -355,10 +359,6 @@ export function SongEditor({ song, genMeta, onSave, onCancel, onDelete }: Props)
           {COMMON_LABELS.map((l) => <option key={l} value={l} />)}
         </datalist>
         <button className="btn btn--ghost btn--block" onClick={addSection}>+ 섹션 추가</button>
-      </div>
-
-      <div className="editor__footer">
-        <button className="btn btn--ghost btn--sm btn--danger" onClick={() => onDelete(draft.id)}>이 곡 삭제</button>
       </div>
     </div>
   )

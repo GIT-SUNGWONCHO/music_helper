@@ -14,17 +14,21 @@ import { GenerateModal } from './components/GenerateModal'
 import { PinPrompt } from './components/PinPrompt'
 import { OwnerPicker } from './components/OwnerPicker'
 import { HomeScreen, type HomeTab } from './components/HomeScreen'
-import { SetListDetail } from './components/SetListDetail'
+import { ConfirmModal } from './components/ConfirmModal'
 
 type Modal = 'none' | 'generate' | 'settings' | 'pin'
 
 const SETTINGS_UNLOCKED_KEY = 'mh.settings.unlocked'
 
+/** 홈 화면 상태 — 곡 뷰어/에디터에서 "목록으로" 눌렀을 때 정확히 여기로 돌아옴(라이브러리인지, 어떤 셋리스트 안이었는지 포함). */
+interface HomeState { name: 'home'; tab: HomeTab; setlistId?: string }
+
 type Screen =
-  | { name: 'home'; tab: HomeTab }
-  | { name: 'view'; id: string }
-  | { name: 'edit'; id: string; isNew?: boolean }
-  | { name: 'setlist'; id: string }
+  | HomeState
+  | { name: 'view'; id: string; from: HomeState }
+  | { name: 'edit'; id: string; isNew?: boolean; from: HomeState }
+
+const LIBRARY_HOME: HomeState = { name: 'home', tab: 'library' }
 
 function SupabaseSetupNotice() {
   return (
@@ -43,12 +47,13 @@ export default function App() {
   const [ownerChosen, setOwnerChosen] = useState(() => hasChosenOwner())
   const [songs, setSongs] = useState<Song[]>([])
   const [setlists, setSetLists] = useState<SetList[]>([])
-  const [screen, setScreen] = useState<Screen>({ name: 'home', tab: 'library' })
+  const [screen, setScreen] = useState<Screen>(LIBRARY_HOME)
   const [ready, setReady] = useState(false)
   const [modal, setModal] = useState<Modal>('none')
   const [genMeta, setGenMeta] = useState<Omit<GenerateResult, 'song'> | null>(null)
   const [generatedSong, setGeneratedSong] = useState<Song | null>(null)
   const [settingsUnlocked, setSettingsUnlocked] = useState(() => localStorage.getItem(SETTINGS_UNLOCKED_KEY) === '1')
+  const [confirmState, setConfirmState] = useState<{ message: string; onConfirm: () => void } | null>(null)
 
   const refresh = useCallback(async (o: Owner) => setSongs(await allSongs(o)), [])
   const refreshSetLists = useCallback(async (o: Owner) => setSetLists(await allSetLists(o)), [])
@@ -76,7 +81,7 @@ export default function App() {
   function switchOwner(o: Owner) {
     saveOwner(o)
     setOwner(o)
-    setScreen({ name: 'home', tab: 'library' })
+    setScreen(LIBRARY_HOME)
   }
   function chooseOwner(o: Owner) {
     saveOwner(o)
@@ -86,40 +91,45 @@ export default function App() {
 
   const current = (id: string) => songs.find((s) => s.id === id) ?? (generatedSong?.id === id ? generatedSong : undefined)
 
-  async function handleSave(song: Song) {
+  async function handleSave(song: Song, from: HomeState) {
     await saveSong(song, owner)
     await refresh(owner)
     setGeneratedSong(null)
     setGenMeta(null)
-    setScreen({ name: 'view', id: song.id })
+    setScreen({ name: 'view', id: song.id, from })
   }
-  async function handleDelete(id: string) {
-    if (!confirm('이 곡을 삭제할까요?')) return
-    if (generatedSong?.id === id) {
-      setGeneratedSong(null)
-      setScreen({ name: 'home', tab: 'library' })
-      return
-    }
-    await deleteSong(id)
-    await refresh(owner)
-    setScreen({ name: 'home', tab: 'library' })
+  function handleDelete(id: string, from: HomeState = LIBRARY_HOME) {
+    setConfirmState({
+      message: '이 곡을 삭제할까요?',
+      onConfirm: async () => {
+        setConfirmState(null)
+        if (generatedSong?.id === id) {
+          setGeneratedSong(null)
+          setScreen(from)
+          return
+        }
+        await deleteSong(id)
+        await refresh(owner)
+        setScreen(from)
+      },
+    })
   }
   function handleNew() {
     const s = newSong()
     setGeneratedSong(s)
-    setScreen({ name: 'edit', id: s.id, isNew: true })
+    setScreen({ name: 'edit', id: s.id, isNew: true, from: LIBRARY_HOME })
   }
-  function handleDuplicate(source: Song) {
+  function handleDuplicate(source: Song, from: HomeState) {
     const { id, createdAt, updatedAt, ...rest } = source
     const copy = newSong({ ...rest, title: rest.title + ' (복제)' })
     setGeneratedSong(copy)
-    setScreen({ name: 'edit', id: copy.id, isNew: true })
+    setScreen({ name: 'edit', id: copy.id, isNew: true, from })
   }
   async function handleGenerated({ song, ...meta }: GenerateResult) {
     setModal('none')
     setGenMeta(meta)
     setGeneratedSong(song)
-    setScreen({ name: 'edit', id: song.id, isNew: true })
+    setScreen({ name: 'edit', id: song.id, isNew: true, from: LIBRARY_HOME })
   }
 
   async function handleCreateSetList(name: string, songId?: string) {
@@ -151,11 +161,16 @@ export default function App() {
     await saveSetList({ ...sl, songIds: sl.songIds.filter((id) => id !== songId) }, owner)
     await refreshSetLists(owner)
   }
-  async function handleDeleteSetList(id: string) {
-    if (!confirm('이 셋리스트를 삭제할까요?')) return
-    await deleteSetList(id)
-    await refreshSetLists(owner)
-    setScreen({ name: 'home', tab: 'setlists' })
+  function handleDeleteSetList(id: string) {
+    setConfirmState({
+      message: '이 셋리스트를 삭제할까요?',
+      onConfirm: async () => {
+        setConfirmState(null)
+        await deleteSetList(id)
+        await refreshSetLists(owner)
+        setScreen({ name: 'home', tab: 'setlists' })
+      },
+    })
   }
 
   if (!supabaseReady) return <SupabaseSetupNotice />
@@ -164,48 +179,44 @@ export default function App() {
 
   const song = (screen.name === 'view' || screen.name === 'edit') ? current(screen.id) : undefined
   if ((screen.name === 'view' || screen.name === 'edit') && !song) {
-    setScreen({ name: 'home', tab: 'library' })
-    return null
-  }
-  const activeSetList = screen.name === 'setlist' ? setlists.find((s) => s.id === screen.id) : undefined
-  if (screen.name === 'setlist' && !activeSetList) {
-    setScreen({ name: 'home', tab: 'setlists' })
+    setScreen(LIBRARY_HOME)
     return null
   }
 
   return (
     <>
       {screen.name === 'home' && (
-        <HomeScreen tab={screen.tab} onTabChange={(tab) => setScreen({ name: 'home', tab })}
-          songs={songs} owner={owner} onSwitchOwner={switchOwner} onOpen={(id) => setScreen({ name: 'view', id })}
-          onDelete={handleDelete} onNew={handleNew} onGenerate={() => setModal('generate')}
+        <HomeScreen tab={screen.tab} setlistId={screen.setlistId}
+          onTabChange={(tab) => setScreen({ name: 'home', tab, setlistId: screen.setlistId })}
+          songs={songs} owner={owner} onSwitchOwner={switchOwner}
+          onOpen={(id) => setScreen({ name: 'view', id, from: { name: 'home', tab: 'library' } })}
+          onDelete={(id) => handleDelete(id, { name: 'home', tab: screen.tab, setlistId: screen.setlistId })}
+          onNew={handleNew} onGenerate={() => setModal('generate')}
           onSettings={() => setModal(settingsUnlocked ? 'settings' : 'pin')}
-          setlists={setlists} onOpenSetList={(id) => setScreen({ name: 'setlist', id })}
+          setlists={setlists}
+          onOpenSetList={(id) => setScreen({ name: 'home', tab: 'setlists', setlistId: id })}
+          onCloseSetListDetail={() => setScreen({ name: 'home', tab: 'setlists' })}
+          onOpenSetlistSong={(id) => setScreen({ name: 'view', id, from: { name: 'home', tab: 'setlists', setlistId: screen.setlistId } })}
           onCreateSetList={handleCreateSetList} onDeleteSetList={handleDeleteSetList}
-          onToggleSongInSetList={handleToggleSongInSetList} />
-      )}
-      {screen.name === 'setlist' && activeSetList && (
-        <SetListDetail setlist={activeSetList} songs={songs}
-          onBack={() => setScreen({ name: 'home', tab: 'setlists' })}
-          onOpenSong={(id) => setScreen({ name: 'view', id })}
-          onRename={(name) => handleRenameSetList(activeSetList.id, name)}
-          onReorder={(songIds) => handleReorderSetList(activeSetList.id, songIds)}
-          onRemoveSong={(songId) => handleRemoveSongFromSetList(activeSetList.id, songId)}
-          onDelete={() => handleDeleteSetList(activeSetList.id)} />
+          onToggleSongInSetList={handleToggleSongInSetList}
+          onRenameSetList={handleRenameSetList} onReorderSetList={handleReorderSetList}
+          onRemoveSongFromSetList={handleRemoveSongFromSetList} />
       )}
       {screen.name === 'view' && song && (
-        <SongView song={song} onEdit={() => setScreen({ name: 'edit', id: song.id })} onBack={() => setScreen({ name: 'home', tab: 'library' })}
-          onDuplicate={() => handleDuplicate(song)} onDelete={handleDelete} />
+        <SongView song={song} onEdit={() => setScreen({ name: 'edit', id: song.id, from: screen.from })}
+          onBack={() => setScreen(screen.from)}
+          onDuplicate={() => handleDuplicate(song, screen.from)}
+          onDelete={(id) => handleDelete(id, screen.from)} />
       )}
       {screen.name === 'edit' && song && (
         <SongEditor song={song} genMeta={genMeta}
-          onSave={handleSave}
+          onSave={(s) => handleSave(s, screen.from)}
           onCancel={() => {
             setGenMeta(null)
-            if (screen.name === 'edit' && screen.isNew) { setGeneratedSong(null); setScreen({ name: 'home', tab: 'library' }) }
-            else setScreen({ name: 'view', id: song.id })
+            if (screen.name === 'edit' && screen.isNew) { setGeneratedSong(null); setScreen(screen.from) }
+            else setScreen({ name: 'view', id: song.id, from: screen.from })
           }}
-          onDelete={handleDelete} />
+          onDelete={(id) => handleDelete(id, screen.from)} />
       )}
 
       {modal === 'pin' && (
@@ -223,6 +234,11 @@ export default function App() {
         <GenerateModal onClose={() => setModal('none')}
           onOpenSettings={() => setModal(settingsUnlocked ? 'settings' : 'pin')}
           onGenerated={handleGenerated} />
+      )}
+
+      {confirmState && (
+        <ConfirmModal title="삭제" message={confirmState.message} confirmLabel="삭제" danger
+          onConfirm={confirmState.onConfirm} onCancel={() => setConfirmState(null)} />
       )}
     </>
   )

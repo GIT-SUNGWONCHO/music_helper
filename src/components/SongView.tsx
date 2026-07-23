@@ -62,7 +62,7 @@ export function SongView({ song, onEdit, onBack, onDuplicate, onDelete }: Props)
   }
 
   return (
-    <div className="page view">
+    <div className="page">
       <div className="toolbar toolbar--stacked">
         <div className="toolbar__row">
           <button className="btn" onClick={onBack}>← 목록</button>
@@ -78,7 +78,10 @@ export function SongView({ song, onEdit, onBack, onDuplicate, onDelete }: Props)
             {song.artist && <span className="muted toolbar__artist"> · {song.artist}</span>}
             {song.tempo ? <span className="muted toolbar__tempo"> · ♩ {song.tempo}</span> : null}
           </div>
-          <span className={'chip chip--status chip--' + song.status}>{statusLabel(song.status)}</span>
+          <span className={'chip chip--status chip--' + song.status}>
+            <span className={'status-dot status-dot--' + song.status} />
+            {statusLabel(song.status)}
+          </span>
         </div>
       </div>
 

@@ -20,11 +20,11 @@ export function SetListHome({ setlists, onOpen, onCreate, onDelete }: Props) {
 
   return (
     <>
-      <div className="input-row" style={{ marginBottom: 16 }}>
-        <input placeholder="새 셋리스트 이름" value={newName}
+      <div className="input-row setlist-create-row">
+        <input className="text-input" placeholder="새 셋리스트 이름" value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && create()} />
-        <button className="btn btn--sm" disabled={!newName.trim()} onClick={create}>만들기</button>
+        <button className="btn btn--sm" disabled={!newName.trim()} onClick={create}>+</button>
       </div>
 
       <div className="rows">
@@ -35,11 +35,8 @@ export function SetListHome({ setlists, onOpen, onCreate, onDelete }: Props) {
                 <div className="row__title">{sl.name}</div>
                 <div className="row__artist">{sl.songIds.length}곡</div>
               </div>
-              <svg className="row__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
             </button>
-            <button className="row__del" title="삭제" onClick={() => onDelete(sl.id)}>×</button>
+            <button className="icon-x icon-x--lg row__del" title="삭제" onClick={() => onDelete(sl.id)}>×</button>
           </div>
         ))}
         {setlists.length === 0 && <p className="empty">아직 셋리스트가 없습니다. 위에서 만들어보세요.</p>}

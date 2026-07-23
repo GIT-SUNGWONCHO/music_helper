@@ -113,7 +113,8 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
           </label>
 
           <div className="field">
-            <span>참고 악보 (선택) — 정확도를 높이려면 악보 이미지나 링크를 넣으세요</span>
+            <span>참고 악보 (선택)</span>
+            <p className="hint" style={{ padding: '0 0 6px' }}>정확도를 높이려면 악보 이미지나 링크를 넣으세요.</p>
             <div className="ref-images">
               {images.map((img, i) => (
                 <div className="ref-thumb" key={i}>
@@ -136,7 +137,7 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
             {images.length > 0
               ? <div className="hint" style={{ padding: '4px 0 0' }}>이미지를 우선 사용합니다 (링크 무시).</div>
               : (
-                <div className="tip">
+                <div className="notice notice--tip">
                   💡 <a href={`https://www.ultimate-guitar.com/search.php?search_type=title&value=${encodeURIComponent((title + ' ' + artist).trim())}`}
                     target="_blank" rel="noreferrer">Ultimate Guitar에서 "{title || '곡'}" 검색</a>해서
                   Chords 악보 주소를 붙여넣으면 정확도가 확 올라가요.

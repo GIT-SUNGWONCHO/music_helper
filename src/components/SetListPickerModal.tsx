@@ -43,7 +43,7 @@ export function SetListPickerModal({ song, setlists, onToggle, onCreate, onClose
             )
           })}
           <div className="input-row" style={{ marginTop: 10 }}>
-            <input placeholder="새 셋리스트 이름" value={newName}
+            <input className="text-input" placeholder="새 셋리스트 이름" value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && create()} />
             <button className="btn btn--sm" disabled={!newName.trim()} onClick={create}>만들기</button>

@@ -17,7 +17,7 @@ export function OwnerPicker({ onChoose }: Props) {
       </div>
       <div style={{ display: 'flex', gap: 12 }}>
         {OWNERS.map((o) => (
-          <button key={o.value} className="btn btn--primary" style={{ padding: '14px 28px', fontSize: '0.95rem' }}
+          <button key={o.value} className="btn btn--primary btn--lg"
             onClick={() => onChoose(o.value)}>
             {o.label}
           </button>

@@ -77,7 +77,7 @@ export function ChordStrip({
   }
 
   return (
-    <div className="diagram-strip-wrap">
+    <div>
       {editable && (
         <div className="diagram-strip__hint">코드표를 누르면 운지를 바꿀 수 있어요</div>
       )}
@@ -92,7 +92,7 @@ export function ChordStrip({
               >
                 <ChordDiagram chord={c} positionIndex={fingerings?.[c] ?? 0} />
               </button>
-              <button className="diagram-cell__x" title="코드표 삭제" onClick={() => remove(c)}>×</button>
+              <button className="icon-x diagram-cell__x" title="코드표 삭제" onClick={() => remove(c)}>×</button>
             </div>
           ) : (
             <ChordDiagram key={c} chord={c} positionIndex={fingerings?.[c] ?? 0} />
@@ -111,7 +111,11 @@ export function ChordStrip({
           <div className="chord-picker__head">
             <strong>{openChord}</strong> 운지 선택
             <div className="spacer" />
-            <button className="btn btn--icon btn--ghost" onClick={() => setOpenChord(null)}>✕</button>
+            <button className="btn btn--icon btn--ghost" title="접기" onClick={() => setOpenChord(null)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 15l6-6 6 6" />
+              </svg>
+            </button>
           </div>
           <div className="chord-picker__grid">
             {openPositions.positions.map((_, i) => (
@@ -132,7 +136,11 @@ export function ChordStrip({
           <div className="chord-picker__head">
             <strong>코드 추가</strong> 루트 음 → 코드 종류 선택
             <div className="spacer" />
-            <button className="btn btn--icon btn--ghost" onClick={() => setAdding(false)}>✕</button>
+            <button className="btn btn--icon btn--ghost" title="접기" onClick={() => setAdding(false)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 15l6-6 6 6" />
+              </svg>
+            </button>
           </div>
           <div className="seg">
             {NOTE_NAMES.map((r) => (
@@ -145,7 +153,7 @@ export function ChordStrip({
             {suffixesForRoot(addRoot).map((s) => {
               const name = displayChordName(addRoot, s)
               return (
-                <button key={s} className="chip chip--restore" onClick={() => addChord(name)}>{name}</button>
+                <button key={s} className="chip chip--restore" onClick={() => addChord(name)}>{name} +</button>
               )
             })}
           </div>

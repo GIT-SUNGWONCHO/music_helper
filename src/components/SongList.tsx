@@ -1,10 +1,12 @@
 import { useMemo, useState, useEffect } from 'react'
 import type { Song, PracticeStatus, SetList } from '../types'
 import { PRACTICE_STATUSES } from '../types'
+import type { Owner } from '../supabase'
 import { SetListPickerModal } from './SetListPickerModal'
 
 interface Props {
   songs: Song[]
+  owner: Owner
   onOpen: (id: string) => void
   onDelete: (id: string) => void
   onNew: () => void
@@ -24,14 +26,26 @@ const SORT_OPTIONS: { value: SortBy; label: string }[] = [
   { value: 'title', label: '제목순' },
 ]
 
+function loadSortBy(owner: Owner): SortBy {
+  const v = localStorage.getItem('mh.sortBy.' + owner)
+  return v === 'title' || v === 'recent' ? v : 'recent'
+}
+
 export function SongList({
-  songs, onOpen, onDelete, onNew, onGenerate,
+  songs, owner, onOpen, onDelete, onNew, onGenerate,
   setlists, onToggleSongInSetList, onCreateSetList,
 }: Props) {
   const [query, setQuery] = useState('')
   const [statusF, setStatusF] = useState<PracticeStatus[]>([])
-  const [sortBy, setSortBy] = useState<SortBy>('recent')
+  const [sortBy, setSortByState] = useState<SortBy>(() => loadSortBy(owner))
   const [sortSheetOpen, setSortSheetOpen] = useState(false)
+
+  useEffect(() => setSortByState(loadSortBy(owner)), [owner])
+
+  function setSortBy(v: SortBy) {
+    setSortByState(v)
+    localStorage.setItem('mh.sortBy.' + owner, v)
+  }
   const [pickerSong, setPickerSong] = useState<Song | null>(null)
   const [fabOpen, setFabOpen] = useState(false)
 
@@ -118,17 +132,13 @@ export function SongList({
                 <div className="row__title">{s.title}{s.version && <span className="row__version"> ({s.version})</span>}</div>
                 <div className="row__artist">{s.artist || '—'}</div>
               </div>
-              <svg className="row__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
             </button>
             <button className="row__add" title="셋리스트에 담기" onClick={() => setPickerSong(s)}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h9A1.5 1.5 0 0 1 16 5.5V20l-6-4-6 4V5.5z" />
-                <path d="M19 8v6M16 11h6" />
+                <path d="M5.5 4h9A1.5 1.5 0 0 1 16 5.5V20l-6-4-6 4V5.5A1.5 1.5 0 0 1 5.5 4z" />
               </svg>
             </button>
-            <button className="row__del" title="삭제" onClick={() => onDelete(s.id)}>×</button>
+            <button className="icon-x icon-x--lg row__del" title="삭제" onClick={() => onDelete(s.id)}>×</button>
           </div>
         ))}
         {filtered.length === 0 && <p className="empty">악보가 없습니다. 아래 + 버튼으로 시작하세요.</p>}
