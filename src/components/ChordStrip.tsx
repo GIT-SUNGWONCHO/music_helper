@@ -144,7 +144,7 @@ export function ChordStrip({
               </svg>
             </button>
           </div>
-          <div className="seg">
+          <div className="seg seg--wrap">
             {NOTE_NAMES.map((r) => (
               <button key={r} type="button"
                 className={'seg__btn' + (addRoot === r ? ' is-on' : '')}
