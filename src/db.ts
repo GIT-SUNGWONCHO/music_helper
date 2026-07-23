@@ -65,10 +65,10 @@ interface SongRow {
   updated_at: number
 }
 
-function toRow(song: Song): SongRow {
+function toRow(song: Song, owner: Owner): SongRow {
   return {
     id: song.id,
-    owner: song.owner ?? 'sungwon',
+    owner,
     title: song.title,
     version: song.version ?? null,
     artist: song.artist,
@@ -90,7 +90,6 @@ function toRow(song: Song): SongRow {
 function fromRow(row: SongRow): Song {
   return {
     id: row.id,
-    owner: row.owner as Owner,
     title: row.title,
     version: row.version ?? undefined,
     artist: row.artist,
@@ -114,33 +113,33 @@ function requireClient() {
   return supabase
 }
 
-/** 성원/민형 공유 라이브러리 — owner로 필터링하지 않고 전체를 반환(누가 만들었는지는 Song.owner로 표시만). */
-export async function allSongs(): Promise<Song[]> {
+export async function allSongs(owner: Owner): Promise<Song[]> {
   const { data, error } = await requireClient()
     .from('songs')
     .select('*')
+    .eq('owner', owner)
     .order('updated_at', { ascending: false })
   if (error) throw new Error(error.message)
   return (data as SongRow[]).map(fromRow)
 }
 
-export async function countSongs(): Promise<number> {
+export async function countSongs(owner: Owner): Promise<number> {
   const { count, error } = await requireClient()
     .from('songs')
     .select('id', { count: 'exact', head: true })
+    .eq('owner', owner)
   if (error) throw new Error(error.message)
   return count ?? 0
 }
 
-export async function saveSong(song: Song): Promise<void> {
+export async function saveSong(song: Song, owner: Owner): Promise<void> {
   song.updatedAt = Date.now()
-  const { error } = await requireClient().from('songs').upsert(toRow(song))
+  const { error } = await requireClient().from('songs').upsert(toRow(song, owner))
   if (error) throw new Error(error.message)
 }
 
-/** 최초 시드 전용 — songs에 owner가 없으면 기본값으로 채움. */
 export async function bulkSaveSongs(songs: Song[], owner: Owner): Promise<void> {
-  const rows = songs.map((s) => toRow({ ...s, owner: s.owner ?? owner, updatedAt: s.updatedAt || Date.now() }))
+  const rows = songs.map((s) => toRow({ ...s, updatedAt: s.updatedAt || Date.now() }, owner))
   const { error } = await requireClient().from('songs').upsert(rows)
   if (error) throw new Error(error.message)
 }

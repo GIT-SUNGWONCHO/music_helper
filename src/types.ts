@@ -1,5 +1,3 @@
-import type { Owner } from './supabase'
-
 /** One measure (마디). Holds the chord(s) played in it and the lyric fragment under it. */
 export interface Bar {
   id: string
@@ -31,8 +29,6 @@ export function statusLabel(s: PracticeStatus): string {
 
 export interface Song {
   id: string
-  /** 이 악보를 만든 사람. 공유 라이브러리에서 "누구 것인지" 표시용 — 수정 권한과는 무관. */
-  owner?: Owner
   title: string
   /** 같은 제목 다른 편곡을 구분하는 짧은 태그 (예: "남키", "어쿠스틱"). 제목 본문에는 넣지 않음. */
   version?: string
