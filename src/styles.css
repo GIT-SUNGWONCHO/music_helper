@@ -86,7 +86,7 @@ body {
 .btn--ghost.btn--danger:hover { color: var(--danger); }
 .btn--primary.btn--danger { --btn-bg: var(--danger); color: var(--accent-ink); border-color: transparent; }
 .btn--primary.btn--danger:hover { background: color-mix(in srgb, var(--danger) 88%, white); border-color: transparent; }
-.btn--ai { --btn-bg: var(--teal); color: var(--teal-ink); border-color: transparent; font-weight: 700; }
+.btn--ai { --btn-bg: var(--teal); color: var(--teal-ink); border-color: transparent; font-weight: 700; min-width: 112px; justify-content: center; }
 .btn--ai:hover { background: color-mix(in srgb, var(--teal) 88%, white); border-color: transparent; }
 .btn--block { width: 100%; margin-top: 12px; }
 .btn:disabled { opacity: 0.35; cursor: default; }
