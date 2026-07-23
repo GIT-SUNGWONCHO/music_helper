@@ -125,6 +125,10 @@ function bassPitchClassOf(position: ChordPosition): number | null {
   return null
 }
 
+// chords-db가 슬래시 코드 전용 운지(예: G의 '/B')를 표기할 때 쓰는 스펠링이 곡마다 샵/플랫이 섞여 있어 둘 다 시도.
+const SHARP_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+const FLAT_NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
+
 /** 코드 토큰의 모든 운지(positions)를 반환. 슬래시 코드는 베이스 음이 실제로 최저음으로 울리는 운지를 우선함. */
 export function getPositions(token: string): { positions: ChordPosition[]; exact: boolean } | null {
   const parsed = parseChord(token)
@@ -140,6 +144,19 @@ export function getPositions(token: string): { positions: ChordPosition[]; exact
   if (!entries) return null
 
   const wanted = dbSuffix(parsed.quality)
+  // 메이저 트라이어드 슬래시 코드는 chords-db가 전용 운지(예: G의 '/B')를 따로 제공하는 경우가 있음 —
+  // 일반 메이저 코드에서 우연히 그 베이스음이 나오는 자리를 찾는 것보다 훨씬 자연스러운 운지라 우선함.
+  if (parsed.bass && wanted[0] === 'major') {
+    const bassPc = pitchClass(parsed.bass)
+    if (!Number.isNaN(bassPc)) {
+      for (const name of [SHARP_NAMES[bassPc], FLAT_NAMES[bassPc]]) {
+        const slashEntry = entries.find((e) => e.suffix === '/' + name)
+        if (slashEntry && slashEntry.positions.length) {
+          return { positions: slashEntry.positions, exact: true }
+        }
+      }
+    }
+  }
   for (let i = 0; i < wanted.length; i++) {
     const entry = entries.find((e) => e.suffix === wanted[i])
     if (entry && entry.positions.length) {
