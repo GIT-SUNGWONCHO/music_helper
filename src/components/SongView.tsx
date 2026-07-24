@@ -32,15 +32,12 @@ interface Props {
 
 export function SongView({ song, onEdit, onBack, onDuplicate, onDelete }: Props) {
   const [semitones, setSemitones] = useState(0)
-  const [capo, setCapo] = useState(song.capoFret ?? 0)
   const [scale, setScale] = useState(1)
   const [mergeStep, setMergeStep] = useState(0) // +면 합치기(넓게), -면 나누기(잘게)
   const sheetRef = useRef<HTMLDivElement>(null)
   const [atBottom, setAtBottom] = useState(false)
 
   const displayKey = transposeNote(song.originalKey, semitones)
-  // 운지 코드 오프셋 = 전조 반음 - 카포 프렛
-  const fingeringOffset = semitones - capo
   const viewSections = regroupSections(song.sections, mergeStep)
 
   useEffect(() => {
@@ -86,6 +83,13 @@ export function SongView({ song, onEdit, onBack, onDuplicate, onDelete }: Props)
       </div>
 
       <div className="controls">
+        {song.capoFret ? (
+          <div className="ctrl">
+            <span className="ctrl__label">카포</span>
+            <span className="ctrl__value">{song.capoFret}프렛</span>
+          </div>
+        ) : null}
+
         <div className="ctrl">
           <span className="ctrl__label">글자</span>
           <button className="btn btn--icon" onClick={() => setScale((s) => Math.max(0.7, +(s - 0.1).toFixed(2)))}>A−</button>
@@ -102,22 +106,6 @@ export function SongView({ song, onEdit, onBack, onDuplicate, onDelete }: Props)
           )}
         </div>
 
-        {capo > 0 && (
-          <div className="ctrl">
-            <span className="ctrl__label">카포</span>
-            <button className="btn btn--icon" onClick={() => setCapo((c) => Math.max(0, c - 1))}>−</button>
-            <span className="ctrl__value">{capo}프렛</span>
-            <button className="btn btn--icon" onClick={() => setCapo((c) => Math.min(7, c + 1))}>+</button>
-            <button className="btn btn--ghost btn--sm" onClick={() => setCapo(0)}>카포 해제</button>
-          </div>
-        )}
-        {capo === 0 && (
-          <div className="ctrl">
-            <span className="ctrl__label">카포</span>
-            <button className="btn btn--ghost btn--sm" onClick={() => setCapo(1)}>끼우기</button>
-          </div>
-        )}
-
         <div className="ctrl">
           <span className="ctrl__label">마디</span>
           <button className="btn btn--sm" title="두 마디를 하나로 합치기" onClick={() => setMergeStep((n) => Math.min(2, n + 1))} disabled={mergeStep >= 2}>합치기</button>
@@ -128,18 +116,16 @@ export function SongView({ song, onEdit, onBack, onDuplicate, onDelete }: Props)
         </div>
       </div>
 
-      <ChordStrip sections={song.sections} semitones={fingeringOffset} rootKey={transposeNote(song.originalKey, fingeringOffset)}
+      <ChordStrip sections={song.sections} semitones={semitones} rootKey={displayKey}
         fingerings={song.fingerings} hiddenChords={song.hiddenChords} pinnedChords={song.pinnedChords} />
 
       <div ref={sheetRef} style={{ fontSize: `${scale}rem` }}>
-        <MeasureGrid sections={viewSections} semitones={fingeringOffset} />
+        <MeasureGrid sections={viewSections} semitones={semitones} />
       </div>
 
-      {(semitones !== 0 || capo > 0) && (
+      {semitones !== 0 && (
         <p className="hint">
-          원키 {song.originalKey}
-          {semitones !== 0 && ` → ${displayKey} (${keyDistance(song.originalKey, displayKey) >= 0 ? '+' : ''}${keyDistance(song.originalKey, displayKey)}반음)`}
-          {capo > 0 && ` · Capo ${capo} 운지 코드`}
+          원키 {song.originalKey} → {displayKey} ({keyDistance(song.originalKey, displayKey) >= 0 ? '+' : ''}{keyDistance(song.originalKey, displayKey)}반음)
         </p>
       )}
 
