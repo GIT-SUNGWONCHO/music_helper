@@ -185,17 +185,24 @@ async function callGemini(
   if (tool === 'search') body.tools = [{ google_search: {} }]
   else if (tool === 'url') body.tools = [{ url_context: {} }]
 
+  // 503(UNAVAILABLE)은 Gemini 쪽 일시적 과부하라 몇 초 간격으로 자동 재시도(최대 3회).
+  const MAX_ATTEMPTS = 3
   let res: Response
-  try {
-    res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-  } catch (e) {
-    throw new Error('네트워크 오류: ' + (e as Error).message)
-  }
-  if (!res.ok) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+    } catch (e) {
+      throw new Error('네트워크 오류: ' + (e as Error).message)
+    }
+    if (res.ok) break
+    if (res.status === 503 && attempt < MAX_ATTEMPTS) {
+      await new Promise((r) => setTimeout(r, attempt * 2000)) // 2초, 4초
+      continue
+    }
     const t = (await res.text().catch(() => '')).replace(/\s+/g, ' ').trim()
     if (res.status === 400 && /API key not valid/i.test(t)) throw new Error('API 키가 올바르지 않습니다.')
     const toolLabel: Record<GeminiTool, string> = { search: '검색', url: '링크 읽기', image: '이미지 읽기', none: '' }
