@@ -159,6 +159,34 @@ type GeminiTool = 'search' | 'url' | 'image' | 'none'
 export interface RefImage { mimeType: string; data: string } // data: base64, no data: prefix
 interface CallResult { text: string; inputTokens: number; outputTokens: number; totalTokens: number; searchUsed: boolean; refUsed: boolean; imageUsed: boolean }
 
+/** 응답이 영영 안 올 때 "생성 중…"에 갇히지 않도록 하는 상한. 이미지 여러 장이면 1분 넘게 걸리기도 해서 넉넉히 잡음. */
+const REQUEST_TIMEOUT_MS = 120_000
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+/** fetch가 응답조차 못 받았을 때 원인을 좁혀 준다.
+ *  생성은 POST + Content-Type이라 브라우저가 preflight(OPTIONS)를 먼저 보내지만,
+ *  모델 목록은 헤더 없는 GET이라 preflight가 없다. 둘의 성패를 비교하면
+ *  "요청이 막힌 것"인지 "키가 죽은 것"인지 "구글 자체에 못 닿는 것"인지 갈린다. */
+async function diagnoseFetchFailure(apiKey: string): Promise<string> {
+  let res: Response
+  try {
+    res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey.trim())}`,
+    )
+  } catch {
+    return 'Google API 서버에 아예 연결되지 않습니다. 콘텐츠 차단기·VPN·비공개 릴레이를 끄거나, 다른 네트워크(Wi-Fi ↔ 셀룰러)로 바꿔서 다시 시도해 보세요.'
+  }
+  if (res.ok) {
+    return 'Google 서버까지는 연결되고 키도 살아 있습니다(모델 목록 조회 성공). 생성 요청만 차단되고 있어요 — 광고/콘텐츠 차단기나 방화벽이 원인일 가능성이 높습니다.'
+  }
+  const t = await res.text().catch(() => '')
+  if (res.status === 400 && /API key not valid/i.test(t)) {
+    return 'API 키가 더 이상 유효하지 않습니다. 설정 > 관리자에서 새 키로 바꿔 주세요.'
+  }
+  return `Google 서버가 ${res.status}로 응답합니다. 키 권한이나 사용량 한도를 확인해 보세요.`
+}
+
 async function callGemini(
   title: string,
   artist: string,
@@ -185,22 +213,35 @@ async function callGemini(
   if (tool === 'search') body.tools = [{ google_search: {} }]
   else if (tool === 'url') body.tools = [{ url_context: {} }]
 
-  // 503(UNAVAILABLE)은 Gemini 쪽 일시적 과부하라 몇 초 간격으로 자동 재시도(최대 3회).
+  // 503(과부하)과 네트워크 실패는 일시적인 경우가 많아 몇 초 간격으로 자동 재시도(최대 3회).
   const MAX_ATTEMPTS = 3
   let res: Response
   for (let attempt = 1; ; attempt++) {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
     try {
       res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        signal: controller.signal,
       })
+      clearTimeout(timer)
     } catch (e) {
-      throw new Error('네트워크 오류: ' + (e as Error).message)
+      clearTimeout(timer)
+      if (attempt < MAX_ATTEMPTS) {
+        await sleep(attempt * 2000) // 2초, 4초
+        continue
+      }
+      const timedOut = (e as Error).name === 'AbortError'
+      const detail = timedOut
+        ? `${REQUEST_TIMEOUT_MS / 1000}초 안에 응답이 오지 않았습니다`
+        : (e as Error).message
+      throw new Error(`요청을 보내지 못했습니다 (${detail}). ${await diagnoseFetchFailure(s.apiKey)}`)
     }
     if (res.ok) break
     if (res.status === 503 && attempt < MAX_ATTEMPTS) {
-      await new Promise((r) => setTimeout(r, attempt * 2000)) // 2초, 4초
+      await sleep(attempt * 2000) // 2초, 4초
       continue
     }
     const t = (await res.text().catch(() => '')).replace(/\s+/g, ' ').trim()
