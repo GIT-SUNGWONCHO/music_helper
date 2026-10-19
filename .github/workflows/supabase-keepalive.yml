@@ -23,13 +23,17 @@ jobs:
             exit 1
           fi
           base="${SUPABASE_URL%/}"
-          status=$(curl -s -o /dev/null -w '%{http_code}' \
+          # 키는 apikey 헤더로만 보낸다. 신형 publishable 키(sb_publishable_...)는 JWT가 아니라서
+          # Authorization: Bearer 로 같이 보내면 JWT 파싱에 걸려 401이 난다. apikey만 쓰면 신·구 키 모두 통한다.
+          body=$(mktemp)
+          status=$(curl -s -o "${body}" -w '%{http_code}' \
             "${base}/rest/v1/songs?select=id&limit=1" \
-            -H "apikey: ${SUPABASE_ANON_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}")
+            -H "apikey: ${SUPABASE_ANON_KEY}")
           echo "HTTP ${status}"
           if [ "${status}" != "200" ]; then
-            echo "Supabase가 200을 반환하지 않았습니다 — 프로젝트가 일시정지됐거나 URL/키가 잘못됐을 수 있습니다."
+            echo "Supabase가 200을 반환하지 않았습니다 — 프로젝트 일시정지 또는 URL/키 문제일 수 있습니다."
+            # 원인 파악용 응답 본문(키는 포함되지 않음)
+            echo "응답: $(head -c 300 "${body}")"
             exit 1
           fi
           echo "Supabase 정상 응답 — keep-alive 완료"
