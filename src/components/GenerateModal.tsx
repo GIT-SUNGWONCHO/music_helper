@@ -15,6 +15,29 @@ interface PickedImage extends RefImage {
 
 const MAX_IMAGES = 4
 
+/** AI가 본문을 가져올 수 없는 사이트 — 봇 차단이나 로그인 요구 때문에 링크를 줘도 읽지 못한다.
+ *  링크 모드는 읽기에 실패하면 생성 자체가 중단되므로, 넣는 시점에 미리 막고 대안을 안내한다. */
+const UNREADABLE_SITES: { pattern: RegExp; label: string }[] = [
+  { pattern: /(^|\.)blog\.naver\.com$/, label: '네이버 블로그' },
+  { pattern: /(^|\.)cafe\.naver\.com$/, label: '네이버 카페' },
+  { pattern: /(^|\.)band\.us$/, label: '네이버 밴드' },
+  { pattern: /(^|\.)instagram\.com$/, label: '인스타그램' },
+  { pattern: /(^|\.)facebook\.com$/, label: '페이스북' },
+]
+
+/** 읽을 수 없는 사이트면 그 이름을, 아니면 null. */
+function unreadableSite(url: string): string | null {
+  const t = url.trim()
+  if (!t) return null
+  let host: string
+  try {
+    host = new URL(/^https?:\/\//i.test(t) ? t : 'https://' + t).hostname.toLowerCase()
+  } catch {
+    return null // 아직 주소 형태가 아니면 입력 중으로 보고 참견하지 않음
+  }
+  return UNREADABLE_SITES.find((s) => s.pattern.test(host))?.label ?? null
+}
+
 function fileToImage(file: File): Promise<PickedImage> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -44,6 +67,8 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
   const [error, setError] = useState('')
   const [unknownReason, setUnknownReason] = useState('')
   const keyReady = hasApiKey()
+  // 이미지가 있으면 링크는 무시되므로(아래 run 참고) 그때는 경고하지 않는다.
+  const blockedSite = images.length > 0 ? null : unreadableSite(refUrl)
 
   async function addFiles(files: FileList | null) {
     if (!files) return
@@ -65,6 +90,7 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
   async function run() {
     if (!title.trim()) { setError('곡 제목을 입력하세요.'); return }
     if (!artist.trim()) { setError('아티스트를 입력하세요.'); return }
+    if (blockedSite) { setError(`${blockedSite} 링크는 AI가 읽지 못합니다. 캡처해서 이미지로 첨부하거나 링크를 지워 주세요.`); return }
     setError('')
     setUnknownReason('')
     setLoading(true)
@@ -141,6 +167,13 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
               onKeyDown={(e) => { if (e.key === 'Enter' && keyReady && !loading) run() }} />
             {images.length > 0
               ? <div className="hint" style={{ padding: '4px 0 0' }}>이미지를 우선 사용합니다 (링크 무시).</div>
+              : blockedSite
+              ? (
+                <div className="notice notice--warn">
+                  {blockedSite}은(는) AI가 본문을 읽지 못합니다 (봇 차단·로그인 필요).
+                  <br />그 페이지를 <b>캡처해서 위에 이미지로 첨부</b>하거나, 다른 코드 악보 사이트 주소를 넣어 주세요.
+                </div>
+              )
               : (
                 <div className="notice notice--tip">
                   💡 <a href={`https://www.ultimate-guitar.com/search.php?search_type=title&value=${encodeURIComponent((title + ' ' + artist).trim())}`}
@@ -183,7 +216,7 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
 
         <div className="modal__foot">
           <button className="btn btn--ghost" onClick={onClose} disabled={loading}>취소</button>
-          <button className="btn btn--ai" onClick={run} disabled={loading || !keyReady}>
+          <button className="btn btn--ai" onClick={run} disabled={loading || !keyReady || !!blockedSite}>
             {loading && <span className="spin" />}
             {loading ? '생성 중…' : '생성'}
           </button>
