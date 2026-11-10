@@ -3,6 +3,7 @@ import { newSong, newSection, newBar } from '../db'
 import { NOTE_NAMES, pitchClass } from '../music/chords'
 import type { AiSettings } from './settings'
 import { recordUsage, type GenType } from './usage'
+import { fetchLyrics, type FoundLyrics } from './lyrics'
 
 export type Difficulty = 'simple' | 'original' | 'rich'
 
@@ -46,7 +47,7 @@ SELF-CHECK before output: Did I write a plain major/minor where the original use
     'Arrangement: ENRICHED. Start from the original chord progression and add tasteful color: maj7, add9, sus2, passing chords, richer voicings. Stay in the same key and feel — do NOT use jazz or extended chords (no 9th, 11th, 13th, b13, dim, aug).',
 }
 
-function buildPrompt(title: string, artist: string, difficulty: Difficulty, tool: GeminiTool, refUrl?: string, userNote?: string): string {
+function buildPrompt(title: string, artist: string, difficulty: Difficulty, tool: GeminiTool, refUrl?: string, userNote?: string, lyrics?: string): string {
   const who = artist ? `"${title}" by ${artist}` : `"${title}"`
   let source: string
   if (tool === 'image') {
@@ -63,8 +64,8 @@ If the URL cannot be read, or it does not contain this song's chart, output ONLY
     source = `A YouTube video for this song is attached. It is the GROUND TRUTH — base the entire chart on it (then apply the arrangement rule).
 - Use ONLY chords that are VISIBLY SHOWN in the video frames: chord names, chord diagrams, tab, sheet music, or a lesson naming the chords. Read them from the screen and keep the key the video is played in.
 - Do NOT work out chords by listening to the audio. If the video shows no chords on screen (e.g. a music video, a lyrics video, an audio-only upload, a live clip), output ONLY: {"unknown": true, "reason": "이 영상에는 코드가 화면에 나오지 않습니다."}.
-- Take lyrics from what is sung or shown in the video. If the video has no vocals and shows no lyrics, leave every "lyric" as "" instead of writing lyrics from memory.
-If the video cannot be accessed or is not this song, output ONLY: {"unknown": true, "reason": "<one Korean sentence why>"}.`
+${lyrics ? '' : `- Take lyrics from what is sung or shown in the video. If the video has no vocals and shows no lyrics, leave every "lyric" as "" instead of writing lyrics from memory.
+`}If the video cannot be accessed or is not this song, output ONLY: {"unknown": true, "reason": "<one Korean sentence why>"}.`
   } else if (tool === 'none') {
     // 검색 도구 없이 호출하는 모드. "검색하라"고 시키면 최신 모델이 없는 도구를 부르려다
     // 깨진 호출(MALFORMED_FUNCTION_CALL)만 내놓고 빈 응답으로 끝난다(실측) — 도구가 없다고 분명히 알린다.
@@ -79,7 +80,14 @@ Write the chart from your own knowledge of ${who}. Aim for the detailed, accurat
   return `You are a guitar chord-chart transcriber. Output a measure-based (마디 단위) chord chart for the song ${who}.
 
 ${source}
-
+${lyrics ? `
+OFFICIAL LYRICS — the correct words of this song, from a lyrics database. They are the GROUND TRUTH for every "lyric" field:
+- Use these words EXACTLY, in this order. Do not change, add, paraphrase or "correct" any word, and do not write lyrics from memory or from listening.
+- Only split them into fragments and place each fragment under the bar where it is sung. Repeat a passage only where the song actually repeats it.
+<lyrics>
+${lyrics}
+</lyrics>
+` : ''}
 ACCURACY RULES — top priority, NEVER invent:
 - Do NOT invent or guess the key, chords, tempo, or lyrics. A plausible-but-wrong chart is WORSE than admitting you don't know.
 - If you do not reliably know this exact song and have no readable reference, output ONLY: {"unknown": true, "reason": "<one Korean sentence why>"}.
@@ -233,8 +241,9 @@ async function callGemini(
   images?: RefImage[],
   userNote?: string,
   signal?: AbortSignal,
+  lyrics?: string,
 ): Promise<CallResult> {
-  const reqParts: Record<string, unknown>[] = [{ text: buildPrompt(title, artist, difficulty, tool, refUrl, userNote) }]
+  const reqParts: Record<string, unknown>[] = [{ text: buildPrompt(title, artist, difficulty, tool, refUrl, userNote, lyrics) }]
   // 유튜브 영상은 주소를 그대로 넘기면 Gemini가 영상을 프레임(약 1초에 1장)과 소리로 읽는다.
   if (tool === 'video' && refUrl) reqParts.unshift({ file_data: { file_uri: refUrl } })
   if (tool === 'image' && images) {
@@ -417,6 +426,8 @@ export interface GenerateResult {
   /** 유튜브 영상 화면의 코드를 읽어서 만든 경우 */
   videoUsed: boolean
   imageUsed: boolean
+  /** 가사 DB에서 가져온 가사를 썼으면 그 곡("가수 - 곡명"). 없으면 가사는 AI가 쓴 것 */
+  lyricsSource?: string
   confidence?: Confidence
   basis?: string
   /** 설정한 모델이 붐벼서 대신 쓴 모델(대체가 없었으면 undefined) */
@@ -477,25 +488,29 @@ export async function generateChart(
   const imgs = refImages && refImages.length > 0 ? refImages : undefined
   const note = userNote?.trim() || undefined
   let result: CallResult
+  // 가사는 AI가 쓰게 두면 지어낸다(실측: 가사가 안 나오는 영상에서 엉뚱한 가사, 규칙으로는 못 막음).
+  // 원본에 가사가 적혀 있는 이미지·악보 링크 말고는 가사 DB에서 찾아 정답으로 넘긴다.
+  const yt = ref ? youtubeWatchUrl(ref) : null
+  const dbLyrics: FoundLyrics | null = imgs || (ref && !yt) ? null : await fetchLyrics(t, a, signal)
   if (imgs) {
     // 참고 이미지 모드: 첨부 악보 이미지를 정답 기준으로 전사
     result = await callGemini(t, a, settings, 'image', difficulty, undefined, imgs, note, signal)
-  } else if (ref && youtubeWatchUrl(ref)) {
+  } else if (yt) {
     // 유튜브 링크 모드: 영상 화면에 나오는 코드를 읽어 정답 기준으로 사용
-    result = await callGemini(t, a, settings, 'video', difficulty, youtubeWatchUrl(ref)!, undefined, note, signal)
+    result = await callGemini(t, a, settings, 'video', difficulty, yt, undefined, note, signal, dbLyrics?.text)
   } else if (ref) {
     // 참고 링크 모드: url_context로 페이지를 읽어 정답 기준으로 사용
     result = await callGemini(t, a, settings, 'url', difficulty, ref, undefined, note, signal)
   } else {
     try {
-      result = await callGemini(t, a, settings, 'search', difficulty, undefined, undefined, note, signal)
+      result = await callGemini(t, a, settings, 'search', difficulty, undefined, undefined, note, signal, dbLyrics?.text)
     } catch (e) {
       // 모델 붐빔·네트워크·키 문제·취소는 검색을 빼고 다시 해도 똑같으므로 바로 알린다.
       // 한도 초과(429)는 다시 해 본다 — 검색 기능은 생성과 한도가 따로라(실측: 검색만 429, 검색 없이는 정상)
       // 검색 한도만 찬 경우가 많다.
       if (e instanceof GeminiError && e.kind !== 'other' && e.kind !== 'quota') throw e
       console.warn('[MusicHelper] 검색(그라운딩) 호출 실패 — 검색 없이 재시도. 원인:', (e as Error).message)
-      result = await callGemini(t, a, settings, 'none', difficulty, undefined, undefined, note, signal)
+      result = await callGemini(t, a, settings, 'none', difficulty, undefined, undefined, note, signal, dbLyrics?.text)
     }
   }
   // 과금 기준 출력 = 전체 - 입력 (thinking 토큰 포함)
@@ -522,6 +537,7 @@ export async function generateChart(
     refUsed: result.refUsed,
     videoUsed: result.videoUsed,
     imageUsed: result.imageUsed,
+    lyricsSource: dbLyrics?.source,
     confidence: asConfidence(chart.confidence),
     basis: typeof chart.basis === 'string' ? chart.basis.trim() : undefined,
     fallbackModel: result.modelUsed !== settings.model ? result.modelUsed : undefined,

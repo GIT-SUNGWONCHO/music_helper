@@ -30,19 +30,29 @@ function GenNotice({ meta }: { meta: GenMeta }) {
   if (meta.imageUsed) {
     return <div className="notice notice--ok">첨부한 악보 이미지를 읽어서 생성했습니다{conf}{basis}{fb}</div>
   }
+  // 가사 DB에서 가져왔으면 어느 곡의 가사인지 보여 준다(다른 곡이 잡혔는지 확인할 수 있게).
+  const lyr = meta.lyricsSource ? ` · 가사: 가사 DB(${meta.lyricsSource})` : ''
   if (meta.videoUsed) {
-    return <div className="notice notice--ok">유튜브 영상 화면의 코드를 읽어서 생성했습니다 (영상 속 연주 키 기준){conf}{basis}{fb}</div>
+    if (!meta.lyricsSource) {
+      return (
+        <div className="notice notice--warn">
+          유튜브 영상 화면의 코드를 읽어서 생성했습니다 (영상 속 연주 키 기준){conf}{basis}{fb}
+          <br />가사 DB에서 이 곡을 찾지 못해 <b>가사는 AI가 영상에서 받아 적었습니다</b> — 틀릴 수 있으니 확인해 주세요.
+        </div>
+      )
+    }
+    return <div className="notice notice--ok">유튜브 영상 화면의 코드를 읽어서 생성했습니다 (영상 속 연주 키 기준){conf}{basis}{lyr}{fb}</div>
   }
   if (meta.refUsed) {
     return <div className="notice notice--ok">참고 링크를 읽어서 생성했습니다{conf}{basis}{fb}</div>
   }
   if (meta.searchUsed) {
-    return <div className="notice notice--ok">웹 검색 결과를 기반으로 생성했습니다{conf}{basis}{fb}</div>
+    return <div className="notice notice--ok">웹 검색 결과를 기반으로 생성했습니다{conf}{basis}{lyr}{fb}</div>
   }
   return (
     <div className="notice notice--warn">
-      웹 검색 없이 AI 학습 지식만으로 생성했습니다{conf}{basis}{fb}
-      <br />키·코드·가사가 실제와 다를 수 있습니다. 정확한 악보가 필요하면 생성 시 <b>참고 악보 링크</b>를 넣어 주세요.
+      웹 검색 없이 AI 학습 지식만으로 생성했습니다{conf}{basis}{lyr}{fb}
+      <br />{meta.lyricsSource ? '키·코드가' : '키·코드·가사가'} 실제와 다를 수 있습니다. 정확한 악보가 필요하면 생성 시 <b>참고 악보 링크</b>를 넣어 주세요.
     </div>
   )
 }
