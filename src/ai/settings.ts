@@ -16,13 +16,17 @@ const SHARED_API_KEY = (import.meta.env.VITE_GEMINI_API_KEY as string | undefine
 export const DEFAULT_SETTINGS: AiSettings = {
   provider: 'gemini',
   apiKey: SHARED_API_KEY,
-  // '-latest' 별칭: 신규 키는 구버전(2.5 등) 사용 불가라 별칭이 안전. 2.5는 기존 키에서만 동작.
-  model: 'gemini-flash-latest',
+  // 실측(같은 키·같은 곡, 링크 모드): 3.6-flash 38초, 3.5-flash 76초. flash-latest 별칭은
+  // 응답 없이 매달려서(503도 없음) 기본값에서 뺐다. 이 모델이 안 되면 generate.ts의 대체 모델로 넘어감.
+  model: 'gemini-3.6-flash',
 }
+
+/** 예전 기본값. 사용자가 고른 게 아니라 기본값이 저장된 경우라 새 기본값으로 바꿔 준다. */
+const LEGACY_DEFAULT_MODEL = 'gemini-flash-latest'
 
 /** 프로바이더별 추천 모델(설정에서 고르거나 직접 입력). */
 export const MODEL_SUGGESTIONS: Record<Provider, string[]> = {
-  gemini: ['gemini-flash-latest', 'gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.5-pro'],
+  gemini: ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-flash-lite-latest'],
 }
 
 export function loadSettings(): AiSettings {
@@ -31,6 +35,7 @@ export function loadSettings(): AiSettings {
     const merged = raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : { ...DEFAULT_SETTINGS }
     // 직접 입력한 키가 없으면 공유 기본 키로 대체(빈 문자열로 저장돼 있던 과거 설정 포함)
     if (!merged.apiKey.trim()) merged.apiKey = SHARED_API_KEY
+    if (merged.model === LEGACY_DEFAULT_MODEL) merged.model = DEFAULT_SETTINGS.model
     return merged
   } catch {
     return { ...DEFAULT_SETTINGS }

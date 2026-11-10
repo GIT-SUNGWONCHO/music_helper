@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { loadSettings, hasApiKey } from '../ai/settings'
-import { generateChart, UnknownSongError, DIFFICULTIES, type Difficulty, type GenerateResult, type RefImage } from '../ai/generate'
+import { generateChart, GeminiError, UnknownSongError, DIFFICULTIES, type Difficulty, type GenerateResult, type RefImage } from '../ai/generate'
 
 interface Props {
   onClose: () => void
@@ -66,7 +66,20 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [unknownReason, setUnknownReason] = useState('')
+  const [elapsed, setElapsed] = useState(0)
+  const abortRef = useRef<AbortController | null>(null)
   const keyReady = hasApiKey()
+
+  // 생성 중 경과 시간(링크·이미지 모드는 1분 넘게 걸려서 멈춘 건지 알 수 있게)
+  useEffect(() => {
+    if (!loading) return
+    setElapsed(0)
+    const t0 = Date.now()
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - t0) / 1000)), 1000)
+    return () => clearInterval(id)
+  }, [loading])
+  // 창을 닫으면 진행 중인 요청도 끊는다.
+  useEffect(() => () => abortRef.current?.abort(), [])
   // 이미지가 있으면 링크는 무시되므로(아래 run 참고) 그때는 경고하지 않는다.
   const blockedSite = images.length > 0 ? null : unreadableSite(refUrl)
 
@@ -94,16 +107,26 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
     setError('')
     setUnknownReason('')
     setLoading(true)
+    const controller = new AbortController()
+    abortRef.current = controller
     try {
       const refImages: RefImage[] = images.map((i) => ({ mimeType: i.mimeType, data: i.data }))
-      const result = await generateChart(title, artist, loadSettings(), difficulty, refUrl, refImages, note.trim() || undefined)
+      const result = await generateChart(title, artist, loadSettings(), difficulty, refUrl, refImages, note.trim() || undefined, controller.signal)
       onGenerated(result)
     } catch (e) {
+      if (e instanceof GeminiError && e.kind === 'cancelled') return // 직접 취소한 거라 안내 불필요
       if (e instanceof UnknownSongError) setUnknownReason(e.message)
       else setError((e as Error).message)
     } finally {
+      if (abortRef.current === controller) abortRef.current = null
       setLoading(false)
     }
+  }
+
+  /** 생성 중이면 요청만 멈추고 창은 그대로, 아니면 창을 닫는다. */
+  function cancel() {
+    if (loading) abortRef.current?.abort()
+    else onClose()
   }
 
   return (
@@ -116,7 +139,7 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
             </svg>
             AI로 악보 만들기
           </strong>
-          <button className="btn btn--icon btn--ghost" onClick={onClose} disabled={loading}>✕</button>
+          <button className="btn btn--icon btn--ghost" onClick={onClose}>✕</button>
         </div>
 
         <div className="modal__body">
@@ -201,7 +224,12 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
               onChange={(e) => setNote(e.target.value)} />
           </label>
 
-          {loading && <div className="notice notice--busy">악보 생성 중… (10~30초)</div>}
+          {loading && (
+            <div className="notice notice--busy">
+              악보 생성 중… {elapsed}초
+              <br />보통 30초~1분, 링크·이미지를 읽을 땐 1~2분 걸려요.
+            </div>
+          )}
           {error && <div className="notice notice--error">{error}</div>}
           {unknownReason && (
             <div className="notice notice--warn">
@@ -215,7 +243,7 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
         </div>
 
         <div className="modal__foot">
-          <button className="btn btn--ghost" onClick={onClose} disabled={loading}>취소</button>
+          <button className="btn btn--ghost" onClick={cancel}>{loading ? '생성 멈추기' : '취소'}</button>
           <button className="btn btn--ai" onClick={run} disabled={loading || !keyReady || !!blockedSite}>
             {loading && <span className="spin" />}
             {loading ? '생성 중…' : '생성'}

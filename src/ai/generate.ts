@@ -57,6 +57,11 @@ If the image is unreadable or is not a chord sheet for this song, output ONLY: {
     source = `A reference chord-sheet URL is provided: ${refUrl}
 Read it with the url_context tool. The reference is the GROUND TRUTH for key, chords, lyrics, and structure — base the entire chart on it (then apply the arrangement rule).
 If the URL cannot be read, or it does not contain this song's chart, output ONLY: {"unknown": true, "reason": "<one Korean sentence why>"}.`
+  } else if (tool === 'none') {
+    // 검색 도구 없이 호출하는 모드. "검색하라"고 시키면 최신 모델이 없는 도구를 부르려다
+    // 깨진 호출(MALFORMED_FUNCTION_CALL)만 내놓고 빈 응답으로 끝난다(실측) — 도구가 없다고 분명히 알린다.
+    source = `You have NO web search or browsing tools in this request — do not try to call any tool or function.
+Write the chart from your own knowledge of ${who}. Aim for the detailed, accurate version (keep sus4, sus2, maj7 and passing chords), not a simplified beginner chart.`
   } else {
     source = `Use web search if available to find the ACCURATE lyrics and chords for ${who}.
 - Search multiple sources (guitar tab sites, chord sites) and pick the most detailed and accurate version — NOT the most simplified beginner version. Simplified charts often drop sus4, sus2, maj7 and passing chords that define the song.
@@ -159,20 +164,21 @@ type GeminiTool = 'search' | 'url' | 'image' | 'none'
 export interface RefImage { mimeType: string; data: string } // data: base64, no data: prefix
 interface CallResult { text: string; inputTokens: number; outputTokens: number; totalTokens: number; searchUsed: boolean; refUsed: boolean; imageUsed: boolean; modelUsed: string }
 
-/** 응답이 영영 안 올 때 "생성 중…"에 갇히지 않도록 하는 상한. 이미지 여러 장이면 1분 넘게 걸리기도 해서 넉넉히 잡음. */
-const REQUEST_TIMEOUT_MS = 120_000
+/** 모델 하나가 응답을 안 줄 때 다음 모델로 넘어가기까지 기다리는 상한.
+ *  실측: 정상 모델로 링크 모드 한 곡(108마디)이 76초 — 이미지 여러 장이면 더 걸리므로 넉넉히 잡음. */
+const REQUEST_TIMEOUT_MS = 150_000
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-/** 설정한 모델이 붐비거나(503) 무료 한도를 넘었거나(429) 없을 때(404) 대신 시도할 모델.
- *  무료 한도는 모델마다 따로라 429에도 효과가 있다. 신규 키는 2.5 같은 구버전을 못 쓸 수 있어
- *  -latest 별칭을 먼저 두고, 이 키로 못 쓰는 모델(404/403)이면 건너뛴다. */
-const FALLBACK_MODELS = ['gemini-flash-lite-latest', 'gemini-2.5-flash']
+/** 설정한 모델이 붐비거나(503) 무료 한도를 넘었거나(429) 없거나(404) 응답이 안 올 때 대신 시도할 모델.
+ *  무료 한도는 모델마다 따로라 429에도 효과가 있다. 이 키로 못 쓰는 모델(404/403)은 건너뛴다.
+ *  2.5 계열은 "신규 사용자 사용 불가"(404)라 넣지 않음. lite는 빠르지만 정확도가 낮아 마지막. */
+const FALLBACK_MODELS = ['gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-flash-lite-latest']
 
 /** 사용자에게 그대로 보여줄 오류. kind로 generateChart가 "검색 없이 재시도"할지 판단한다 —
  *  모델 붐빔·네트워크·키 문제는 다시 해도 같으므로 재시도하지 않는다. */
 export class GeminiError extends Error {
-  constructor(message: string, readonly kind: 'busy' | 'network' | 'auth' | 'other') {
+  constructor(message: string, readonly kind: 'busy' | 'quota' | 'network' | 'auth' | 'cancelled' | 'other') {
     super(message)
     this.name = 'GeminiError'
   }
@@ -203,6 +209,7 @@ async function diagnoseFetchFailure(apiKey: string): Promise<string> {
 
 /** 대체 모델까지 다 실패했을 때, 마지막 응답 코드에 맞는 안내. */
 function exhaustedMessage(lastStatus: number): string {
+  if (lastStatus === 0) return 'AI가 너무 오래 응답하지 않아 중단했어요. 잠시 뒤에 다시 시도해 주세요.'
   if (lastStatus === 429) return 'AI 무료 사용량 한도를 다 썼어요. 잠시 뒤(길면 내일) 다시 시도해 주세요.'
   if (lastStatus === 404) return '설정된 AI 모델을 찾을 수 없어요. 설정 > 관리자에서 \'모델 불러오기\'로 다른 모델을 골라 주세요.'
   return '지금 AI 모델이 붐벼서 생성하지 못했어요. 1~2분 뒤에 다시 시도해 주세요.'
@@ -217,6 +224,7 @@ async function callGemini(
   refUrl?: string,
   images?: RefImage[],
   userNote?: string,
+  signal?: AbortSignal,
 ): Promise<CallResult> {
   const reqParts: Record<string, unknown>[] = [{ text: buildPrompt(title, artist, difficulty, tool, refUrl, userNote) }]
   if (tool === 'image' && images) {
@@ -241,8 +249,11 @@ async function callGemini(
     const maxAttempts = isFallback ? 2 : 3
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(s.apiKey)}`
     for (let attempt = 1; ; attempt++) {
+      if (signal?.aborted) throw new GeminiError('생성을 취소했어요.', 'cancelled')
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+      const onCancel = () => controller.abort()
+      signal?.addEventListener('abort', onCancel)
       try {
         res = await fetch(url, {
           method: 'POST',
@@ -251,17 +262,24 @@ async function callGemini(
           signal: controller.signal,
         })
         clearTimeout(timer)
+        signal?.removeEventListener('abort', onCancel)
       } catch (e) {
         clearTimeout(timer)
+        signal?.removeEventListener('abort', onCancel)
+        if (signal?.aborted) throw new GeminiError('생성을 취소했어요.', 'cancelled')
+        if ((e as Error).name === 'AbortError') {
+          // 응답이 아예 안 오는 건 그 모델 문제(실측: 일부 최신 모델이 503도 없이 매달림) —
+          // 같은 모델을 다시 기다리면 시간만 배로 드니 바로 다음 모델로 넘어간다.
+          console.warn(`[MusicHelper] ${model} ${REQUEST_TIMEOUT_MS / 1000}초 무응답 — 다음 모델로`)
+          lastStatus = 0
+          continue modelLoop
+        }
         if (attempt < maxAttempts) {
           await sleep(attempt * 2000) // 2초, 4초
           continue
         }
         console.warn('[MusicHelper] Gemini 요청 실패:', model, e)
         // 연결 문제는 모델을 바꿔도 같으므로 바로 알린다.
-        if ((e as Error).name === 'AbortError') {
-          throw new GeminiError('AI 응답이 2분 넘게 오지 않아 중단했어요. 이미지가 크거나 네트워크가 느릴 수 있어요. 다시 시도해 주세요.', 'network')
-        }
         throw new GeminiError(`인터넷 연결 문제로 AI에 요청을 보내지 못했어요. ${await diagnoseFetchFailure(s.apiKey)}`, 'network')
       }
       if (res.ok) {
@@ -290,12 +308,22 @@ async function callGemini(
       throw new GeminiError(`AI가 ${what ? what + ' ' : ''}요청을 처리하지 못했어요(오류 코드 ${res.status}). 다시 시도해 주세요.`, 'other')
     }
   }
-  if (!res || !res.ok) throw new GeminiError(exhaustedMessage(lastStatus), 'busy')
+  if (!res || !res.ok) throw new GeminiError(exhaustedMessage(lastStatus), lastStatus === 429 ? 'quota' : 'busy')
   if (modelUsed !== s.model) console.warn(`[MusicHelper] ${s.model} 대신 ${modelUsed}로 생성`)
   const data = await res.json()
   const parts = data?.candidates?.[0]?.content?.parts
   const text = Array.isArray(parts) ? parts.map((p: { text?: string }) => p.text ?? '').join('') : ''
-  if (!text.trim()) throw new Error('빈 응답을 받았습니다. 다시 시도해 주세요.')
+  if (!text.trim()) {
+    const finish = String(data?.candidates?.[0]?.finishReason ?? data?.promptFeedback?.blockReason ?? '')
+    console.warn(`[MusicHelper] ${modelUsed}/${tool} 빈 응답, finishReason=${finish}`)
+    if (/RECITATION|SAFETY|PROHIBITED|BLOCKLIST|SPII/.test(finish)) {
+      throw new GeminiError('AI가 저작권·안전 정책 때문에 이 곡을 쓰지 않았어요. 참고 링크나 악보 이미지를 넣으면 만들 수 있어요.', 'other')
+    }
+    if (finish === 'MAX_TOKENS') {
+      throw new GeminiError('곡이 너무 길어서 AI가 끝까지 쓰지 못했어요. 다시 시도해 주세요.', 'other')
+    }
+    throw new GeminiError('AI가 빈 답을 보냈어요. 다시 시도해 주세요.', 'other')
+  }
 
   // 검색/링크 소스 로깅 (개발용 — 브라우저 콘솔에서 확인)
   const grounding = data?.candidates?.[0]?.groundingMetadata
@@ -389,6 +417,7 @@ export async function generateChart(
   refUrl?: string,
   refImages?: RefImage[],
   userNote?: string,
+  signal?: AbortSignal,
 ): Promise<GenerateResult> {
   if (!settings.apiKey.trim()) throw new Error('먼저 설정에서 Gemini API 키를 입력하세요.')
   if (settings.provider !== 'gemini') throw new Error('현재는 Gemini만 지원합니다.')
@@ -401,18 +430,20 @@ export async function generateChart(
   let result: CallResult
   if (imgs) {
     // 참고 이미지 모드: 첨부 악보 이미지를 정답 기준으로 전사
-    result = await callGemini(t, a, settings, 'image', difficulty, undefined, imgs, note)
+    result = await callGemini(t, a, settings, 'image', difficulty, undefined, imgs, note, signal)
   } else if (ref) {
     // 참고 링크 모드: url_context로 페이지를 읽어 정답 기준으로 사용
-    result = await callGemini(t, a, settings, 'url', difficulty, ref, undefined, note)
+    result = await callGemini(t, a, settings, 'url', difficulty, ref, undefined, note, signal)
   } else {
     try {
-      result = await callGemini(t, a, settings, 'search', difficulty, undefined, undefined, note)
+      result = await callGemini(t, a, settings, 'search', difficulty, undefined, undefined, note, signal)
     } catch (e) {
-      // 모델 붐빔·네트워크·키 문제는 검색을 빼고 다시 해도 똑같이 실패하므로 바로 알린다.
-      if (e instanceof GeminiError && e.kind !== 'other') throw e
+      // 모델 붐빔·네트워크·키 문제·취소는 검색을 빼고 다시 해도 똑같으므로 바로 알린다.
+      // 한도 초과(429)는 다시 해 본다 — 검색 기능은 생성과 한도가 따로라(실측: 검색만 429, 검색 없이는 정상)
+      // 검색 한도만 찬 경우가 많다.
+      if (e instanceof GeminiError && e.kind !== 'other' && e.kind !== 'quota') throw e
       console.warn('[MusicHelper] 검색(그라운딩) 호출 실패 — 검색 없이 재시도. 원인:', (e as Error).message)
-      result = await callGemini(t, a, settings, 'none', difficulty, undefined, undefined, note)
+      result = await callGemini(t, a, settings, 'none', difficulty, undefined, undefined, note, signal)
     }
   }
   // 과금 기준 출력 = 전체 - 입력 (thinking 토큰 포함)
