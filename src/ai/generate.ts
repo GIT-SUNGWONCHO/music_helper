@@ -157,12 +157,26 @@ function toSong(c: GenChart, fbTitle: string, fbArtist: string): Song {
 // ---- Gemini call ----
 type GeminiTool = 'search' | 'url' | 'image' | 'none'
 export interface RefImage { mimeType: string; data: string } // data: base64, no data: prefix
-interface CallResult { text: string; inputTokens: number; outputTokens: number; totalTokens: number; searchUsed: boolean; refUsed: boolean; imageUsed: boolean }
+interface CallResult { text: string; inputTokens: number; outputTokens: number; totalTokens: number; searchUsed: boolean; refUsed: boolean; imageUsed: boolean; modelUsed: string }
 
 /** 응답이 영영 안 올 때 "생성 중…"에 갇히지 않도록 하는 상한. 이미지 여러 장이면 1분 넘게 걸리기도 해서 넉넉히 잡음. */
 const REQUEST_TIMEOUT_MS = 120_000
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+/** 설정한 모델이 붐비거나(503) 무료 한도를 넘었거나(429) 없을 때(404) 대신 시도할 모델.
+ *  무료 한도는 모델마다 따로라 429에도 효과가 있다. 신규 키는 2.5 같은 구버전을 못 쓸 수 있어
+ *  -latest 별칭을 먼저 두고, 이 키로 못 쓰는 모델(404/403)이면 건너뛴다. */
+const FALLBACK_MODELS = ['gemini-flash-lite-latest', 'gemini-2.5-flash']
+
+/** 사용자에게 그대로 보여줄 오류. kind로 generateChart가 "검색 없이 재시도"할지 판단한다 —
+ *  모델 붐빔·네트워크·키 문제는 다시 해도 같으므로 재시도하지 않는다. */
+export class GeminiError extends Error {
+  constructor(message: string, readonly kind: 'busy' | 'network' | 'auth' | 'other') {
+    super(message)
+    this.name = 'GeminiError'
+  }
+}
 
 /** fetch가 응답조차 못 받았을 때 원인을 좁혀 준다.
  *  생성은 POST + Content-Type이라 브라우저가 preflight(OPTIONS)를 먼저 보내지만,
@@ -175,16 +189,23 @@ async function diagnoseFetchFailure(apiKey: string): Promise<string> {
       `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey.trim())}`,
     )
   } catch {
-    return 'Google API 서버에 아예 연결되지 않습니다. 콘텐츠 차단기·VPN·비공개 릴레이를 끄거나, 다른 네트워크(Wi-Fi ↔ 셀룰러)로 바꿔서 다시 시도해 보세요.'
+    return 'Google 서버에 연결되지 않아요. 콘텐츠 차단기·VPN·비공개 릴레이를 끄거나, Wi-Fi ↔ 셀룰러를 바꿔서 다시 시도해 주세요.'
   }
   if (res.ok) {
-    return 'Google 서버까지는 연결되고 키도 살아 있습니다(모델 목록 조회 성공). 생성 요청만 차단되고 있어요 — 광고/콘텐츠 차단기나 방화벽이 원인일 가능성이 높습니다.'
+    return 'Google 서버에는 연결되는데 생성 요청만 막히고 있어요. 광고/콘텐츠 차단기나 방화벽을 꺼 보세요.'
   }
   const t = await res.text().catch(() => '')
   if (res.status === 400 && /API key not valid/i.test(t)) {
-    return 'API 키가 더 이상 유효하지 않습니다. 설정 > 관리자에서 새 키로 바꿔 주세요.'
+    return 'API 키가 더 이상 유효하지 않아요. 설정 > 관리자에서 새 키로 바꿔 주세요.'
   }
-  return `Google 서버가 ${res.status}로 응답합니다. 키 권한이나 사용량 한도를 확인해 보세요.`
+  return `Google 서버 응답이 이상해요(오류 코드 ${res.status}). 잠시 뒤 다시 시도해 주세요.`
+}
+
+/** 대체 모델까지 다 실패했을 때, 마지막 응답 코드에 맞는 안내. */
+function exhaustedMessage(lastStatus: number): string {
+  if (lastStatus === 429) return 'AI 무료 사용량 한도를 다 썼어요. 잠시 뒤(길면 내일) 다시 시도해 주세요.'
+  if (lastStatus === 404) return '설정된 AI 모델을 찾을 수 없어요. 설정 > 관리자에서 \'모델 불러오기\'로 다른 모델을 골라 주세요.'
+  return '지금 AI 모델이 붐벼서 생성하지 못했어요. 1~2분 뒤에 다시 시도해 주세요.'
 }
 
 async function callGemini(
@@ -197,9 +218,6 @@ async function callGemini(
   images?: RefImage[],
   userNote?: string,
 ): Promise<CallResult> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-    s.model,
-  )}:generateContent?key=${encodeURIComponent(s.apiKey)}`
   const reqParts: Record<string, unknown>[] = [{ text: buildPrompt(title, artist, difficulty, tool, refUrl, userNote) }]
   if (tool === 'image' && images) {
     for (const img of images) reqParts.push({ inline_data: { mime_type: img.mimeType, data: img.data } })
@@ -213,42 +231,67 @@ async function callGemini(
   if (tool === 'search') body.tools = [{ google_search: {} }]
   else if (tool === 'url') body.tools = [{ url_context: {} }]
 
-  // 503(과부하)과 네트워크 실패는 일시적인 경우가 많아 몇 초 간격으로 자동 재시도(최대 3회).
-  const MAX_ATTEMPTS = 3
-  let res: Response
-  for (let attempt = 1; ; attempt++) {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
-    try {
-      res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      })
-      clearTimeout(timer)
-    } catch (e) {
-      clearTimeout(timer)
-      if (attempt < MAX_ATTEMPTS) {
-        await sleep(attempt * 2000) // 2초, 4초
+  // 같은 모델로 일시적 실패(5xx·네트워크)를 몇 번 재시도하고, 붐빔/한도/없는 모델이면 다음 모델로 넘어간다.
+  const models = [s.model, ...FALLBACK_MODELS.filter((m) => m !== s.model)]
+  let res: Response | undefined
+  let modelUsed = s.model
+  let lastStatus = 0
+  modelLoop: for (const model of models) {
+    const isFallback = model !== s.model
+    const maxAttempts = isFallback ? 2 : 3
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(s.apiKey)}`
+    for (let attempt = 1; ; attempt++) {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+      try {
+        res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        })
+        clearTimeout(timer)
+      } catch (e) {
+        clearTimeout(timer)
+        if (attempt < maxAttempts) {
+          await sleep(attempt * 2000) // 2초, 4초
+          continue
+        }
+        console.warn('[MusicHelper] Gemini 요청 실패:', model, e)
+        // 연결 문제는 모델을 바꿔도 같으므로 바로 알린다.
+        if ((e as Error).name === 'AbortError') {
+          throw new GeminiError('AI 응답이 2분 넘게 오지 않아 중단했어요. 이미지가 크거나 네트워크가 느릴 수 있어요. 다시 시도해 주세요.', 'network')
+        }
+        throw new GeminiError(`인터넷 연결 문제로 AI에 요청을 보내지 못했어요. ${await diagnoseFetchFailure(s.apiKey)}`, 'network')
+      }
+      if (res.ok) {
+        modelUsed = model
+        break modelLoop
+      }
+      lastStatus = res.status
+      const t = (await res.text().catch(() => '')).replace(/\s+/g, ' ').trim()
+      console.warn(`[MusicHelper] Gemini ${res.status} (${model}, ${tool}):`, t.slice(0, 300))
+      const transient = res.status >= 500
+      if (transient && attempt < maxAttempts) {
+        await sleep(attempt * 2000)
         continue
       }
-      const timedOut = (e as Error).name === 'AbortError'
-      const detail = timedOut
-        ? `${REQUEST_TIMEOUT_MS / 1000}초 안에 응답이 오지 않았습니다`
-        : (e as Error).message
-      throw new Error(`요청을 보내지 못했습니다 (${detail}). ${await diagnoseFetchFailure(s.apiKey)}`)
+      // 붐빔·한도·없는 모델 → 다음 모델. 대체 모델을 이 키로 못 쓰는 경우(403)도 건너뛴다.
+      if (transient || res.status === 429 || res.status === 404 || (isFallback && res.status === 403)) {
+        continue modelLoop
+      }
+      if (res.status === 400 && /API key not valid/i.test(t)) {
+        throw new GeminiError('API 키가 올바르지 않아요. 설정 > 관리자에서 키를 확인해 주세요.', 'auth')
+      }
+      if (res.status === 403) {
+        throw new GeminiError('API 키에 권한이 없어요. 설정 > 관리자에서 키를 확인해 주세요.', 'auth')
+      }
+      const what = tool === 'url' ? '링크를 읽는 중에' : tool === 'image' ? '이미지를 읽는 중에' : ''
+      throw new GeminiError(`AI가 ${what ? what + ' ' : ''}요청을 처리하지 못했어요(오류 코드 ${res.status}). 다시 시도해 주세요.`, 'other')
     }
-    if (res.ok) break
-    if (res.status === 503 && attempt < MAX_ATTEMPTS) {
-      await sleep(attempt * 2000) // 2초, 4초
-      continue
-    }
-    const t = (await res.text().catch(() => '')).replace(/\s+/g, ' ').trim()
-    if (res.status === 400 && /API key not valid/i.test(t)) throw new Error('API 키가 올바르지 않습니다.')
-    const toolLabel: Record<GeminiTool, string> = { search: '검색', url: '링크 읽기', image: '이미지 읽기', none: '' }
-    throw new Error(`Gemini ${res.status}${toolLabel[tool] ? ` (${toolLabel[tool]} 사용)` : ''}: ${t.slice(0, 260)}`)
   }
+  if (!res || !res.ok) throw new GeminiError(exhaustedMessage(lastStatus), 'busy')
+  if (modelUsed !== s.model) console.warn(`[MusicHelper] ${s.model} 대신 ${modelUsed}로 생성`)
   const data = await res.json()
   const parts = data?.candidates?.[0]?.content?.parts
   const text = Array.isArray(parts) ? parts.map((p: { text?: string }) => p.text ?? '').join('') : ''
@@ -278,7 +321,7 @@ async function callGemini(
   const outputTokens = Number(meta.candidatesTokenCount) || 0
   // totalTokenCount는 thinking 토큰까지 포함 — 유료 과금은 이 기준. 없으면 input+output로 대체.
   const totalTokens = Number(meta.totalTokenCount) || inputTokens + outputTokens
-  return { text, inputTokens, outputTokens, totalTokens, searchUsed: actualSearchUsed, refUsed, imageUsed: tool === 'image' }
+  return { text, inputTokens, outputTokens, totalTokens, searchUsed: actualSearchUsed, refUsed, imageUsed: tool === 'image', modelUsed }
 }
 
 /** 이 API 키로 generateContent가 가능한 Gemini 모델 이름 목록을 조회. */
@@ -320,6 +363,8 @@ export interface GenerateResult {
   imageUsed: boolean
   confidence?: Confidence
   basis?: string
+  /** 설정한 모델이 붐벼서 대신 쓴 모델(대체가 없었으면 undefined) */
+  fallbackModel?: string
 }
 
 /** 모델이 곡을 몰라서 생성을 거부한 경우. */
@@ -364,6 +409,8 @@ export async function generateChart(
     try {
       result = await callGemini(t, a, settings, 'search', difficulty, undefined, undefined, note)
     } catch (e) {
+      // 모델 붐빔·네트워크·키 문제는 검색을 빼고 다시 해도 똑같이 실패하므로 바로 알린다.
+      if (e instanceof GeminiError && e.kind !== 'other') throw e
       console.warn('[MusicHelper] 검색(그라운딩) 호출 실패 — 검색 없이 재시도. 원인:', (e as Error).message)
       result = await callGemini(t, a, settings, 'none', difficulty, undefined, undefined, note)
     }
@@ -376,7 +423,7 @@ export async function generateChart(
   try {
     chart = JSON.parse(extractJson(result.text))
   } catch {
-    throw new Error('생성 결과를 해석하지 못했습니다(JSON 파싱 실패). 다시 시도해 주세요.')
+    throw new Error('AI가 보낸 악보를 읽지 못했어요(형식이 깨져 있음). 다시 시도해 주세요.')
   }
 
   if (chart.unknown) {
@@ -393,5 +440,6 @@ export async function generateChart(
     imageUsed: result.imageUsed,
     confidence: asConfidence(chart.confidence),
     basis: typeof chart.basis === 'string' ? chart.basis.trim() : undefined,
+    fallbackModel: result.modelUsed !== settings.model ? result.modelUsed : undefined,
   }
 }

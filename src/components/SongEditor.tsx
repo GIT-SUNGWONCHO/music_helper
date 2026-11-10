@@ -26,18 +26,19 @@ interface RowRef { secIdx: number; start: number; len: number }
 function GenNotice({ meta }: { meta: GenMeta }) {
   const conf = meta.confidence ? ` · 신뢰도: ${CONFIDENCE_LABEL[meta.confidence]}` : ''
   const basis = meta.basis ? ` · 근거: ${meta.basis}` : ''
+  const fb = meta.fallbackModel ? ` · 기본 모델이 붐벼서 ${meta.fallbackModel}로 대신 생성` : ''
   if (meta.imageUsed) {
-    return <div className="notice notice--ok">첨부한 악보 이미지를 읽어서 생성했습니다{conf}{basis}</div>
+    return <div className="notice notice--ok">첨부한 악보 이미지를 읽어서 생성했습니다{conf}{basis}{fb}</div>
   }
   if (meta.refUsed) {
-    return <div className="notice notice--ok">참고 링크를 읽어서 생성했습니다{conf}{basis}</div>
+    return <div className="notice notice--ok">참고 링크를 읽어서 생성했습니다{conf}{basis}{fb}</div>
   }
   if (meta.searchUsed) {
-    return <div className="notice notice--ok">웹 검색 결과를 기반으로 생성했습니다{conf}{basis}</div>
+    return <div className="notice notice--ok">웹 검색 결과를 기반으로 생성했습니다{conf}{basis}{fb}</div>
   }
   return (
     <div className="notice notice--warn">
-      웹 검색 없이 AI 학습 지식만으로 생성했습니다{conf}{basis}
+      웹 검색 없이 AI 학습 지식만으로 생성했습니다{conf}{basis}{fb}
       <br />키·코드·가사가 실제와 다를 수 있습니다. 정확한 악보가 필요하면 생성 시 <b>참고 악보 링크</b>를 넣어 주세요.
     </div>
   )
