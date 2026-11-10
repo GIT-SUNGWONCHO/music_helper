@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { loadSettings, hasApiKey } from '../ai/settings'
-import { generateChart, GeminiError, UnknownSongError, DIFFICULTIES, type Difficulty, type GenerateResult, type RefImage } from '../ai/generate'
+import { generateChart, youtubeWatchUrl, GeminiError, UnknownSongError, DIFFICULTIES, type Difficulty, type GenerateResult, type RefImage } from '../ai/generate'
 
 interface Props {
   onClose: () => void
@@ -82,6 +82,8 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
   useEffect(() => () => abortRef.current?.abort(), [])
   // 이미지가 있으면 링크는 무시되므로(아래 run 참고) 그때는 경고하지 않는다.
   const blockedSite = images.length > 0 ? null : unreadableSite(refUrl)
+  const isYoutube = images.length === 0 && !!youtubeWatchUrl(refUrl)
+  const searchWords = (title + ' ' + artist).trim()
 
   async function addFiles(files: FileList | null) {
     if (!files) return
@@ -164,7 +166,7 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
 
           <div className="field">
             <div className="field-group__title">참고 악보 (선택)</div>
-            <p className="hint" style={{ padding: '0 0 6px' }}>정확도를 높이려면 악보 이미지나 링크를 넣으세요.</p>
+            <p className="hint" style={{ padding: '0 0 6px' }}>정확도를 높이려면 악보 이미지나 링크(악보 페이지·유튜브)를 넣으세요.</p>
 
             <span>이미지</span>
             <div className="ref-images">
@@ -184,7 +186,7 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
             </div>
 
             <span>또는 링크</span>
-            <input value={refUrl} placeholder="코드 악보 페이지 주소 https://…"
+            <input value={refUrl} placeholder="코드 악보 페이지나 유튜브 주소 https://…"
               disabled={images.length > 0}
               onChange={(e) => setRefUrl(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && keyReady && !loading) run() }} />
@@ -197,11 +199,19 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
                   <br />그 페이지를 <b>캡처해서 위에 이미지로 첨부</b>하거나, 다른 코드 악보 사이트 주소를 넣어 주세요.
                 </div>
               )
+              : isYoutube
+              ? (
+                <div className="notice notice--tip">
+                  유튜브는 <b>화면에 코드가 나오는 영상</b>(레슨·코드 커버)만 읽을 수 있어요. 뮤직비디오·음원 영상은 생성되지 않습니다.
+                  <br />코드는 영상에서 연주하는 키 그대로 나와요.
+                </div>
+              )
               : (
                 <div className="notice notice--tip">
-                  💡 <a href={`https://www.ultimate-guitar.com/search.php?search_type=title&value=${encodeURIComponent((title + ' ' + artist).trim())}`}
-                    target="_blank" rel="noreferrer">Ultimate Guitar에서 "{title || '곡'}" 검색</a>해서
-                  Chords 악보 주소를 붙여넣으면 정확도가 확 올라가요.
+                  💡 <a href={`https://www.ultimate-guitar.com/search.php?search_type=title&value=${encodeURIComponent(searchWords)}`}
+                    target="_blank" rel="noreferrer">Ultimate Guitar에서 "{title || '곡'}" 검색</a>해서 Chords 악보 주소를 붙여넣거나,{' '}
+                  <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent((searchWords + ' 기타 코드').trim())}`}
+                    target="_blank" rel="noreferrer">유튜브에서 코드 영상</a>을 찾아 주소를 붙여넣으면 정확도가 확 올라가요.
                 </div>
               )}
           </div>

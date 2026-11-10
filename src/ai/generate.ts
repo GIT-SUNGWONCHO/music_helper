@@ -57,6 +57,14 @@ If the image is unreadable or is not a chord sheet for this song, output ONLY: {
     source = `A reference chord-sheet URL is provided: ${refUrl}
 Read it with the url_context tool. The reference is the GROUND TRUTH for key, chords, lyrics, and structure — base the entire chart on it (then apply the arrangement rule).
 If the URL cannot be read, or it does not contain this song's chart, output ONLY: {"unknown": true, "reason": "<one Korean sentence why>"}.`
+  } else if (tool === 'video') {
+    // 실측: 귀로 듣고 코드를 따게 하면 키부터 틀린 악보를 자신 있게 지어낸다(같은 곡 2회 모두).
+    // 화면에 보이는 코드만 읽게 하고, 없으면 거절하게 한다.
+    source = `A YouTube video for this song is attached. It is the GROUND TRUTH — base the entire chart on it (then apply the arrangement rule).
+- Use ONLY chords that are VISIBLY SHOWN in the video frames: chord names, chord diagrams, tab, sheet music, or a lesson naming the chords. Read them from the screen and keep the key the video is played in.
+- Do NOT work out chords by listening to the audio. If the video shows no chords on screen (e.g. a music video, a lyrics video, an audio-only upload, a live clip), output ONLY: {"unknown": true, "reason": "이 영상에는 코드가 화면에 나오지 않습니다."}.
+- Take lyrics from what is sung or shown in the video. If the video has no vocals and shows no lyrics, leave every "lyric" as "" instead of writing lyrics from memory.
+If the video cannot be accessed or is not this song, output ONLY: {"unknown": true, "reason": "<one Korean sentence why>"}.`
   } else if (tool === 'none') {
     // 검색 도구 없이 호출하는 모드. "검색하라"고 시키면 최신 모델이 없는 도구를 부르려다
     // 깨진 호출(MALFORMED_FUNCTION_CALL)만 내놓고 빈 응답으로 끝난다(실측) — 도구가 없다고 분명히 알린다.
@@ -160,9 +168,9 @@ function toSong(c: GenChart, fbTitle: string, fbArtist: string): Song {
 }
 
 // ---- Gemini call ----
-type GeminiTool = 'search' | 'url' | 'image' | 'none'
+type GeminiTool = 'search' | 'url' | 'video' | 'image' | 'none'
 export interface RefImage { mimeType: string; data: string } // data: base64, no data: prefix
-interface CallResult { text: string; inputTokens: number; outputTokens: number; totalTokens: number; searchUsed: boolean; refUsed: boolean; imageUsed: boolean; modelUsed: string }
+interface CallResult { text: string; inputTokens: number; outputTokens: number; totalTokens: number; searchUsed: boolean; refUsed: boolean; videoUsed: boolean; imageUsed: boolean; modelUsed: string }
 
 /** 모델 하나가 응답을 안 줄 때 다음 모델로 넘어가기까지 기다리는 상한.
  *  실측: 정상 모델로 링크 모드 한 곡(108마디)이 76초 — 이미지 여러 장이면 더 걸리므로 넉넉히 잡음. */
@@ -227,6 +235,8 @@ async function callGemini(
   signal?: AbortSignal,
 ): Promise<CallResult> {
   const reqParts: Record<string, unknown>[] = [{ text: buildPrompt(title, artist, difficulty, tool, refUrl, userNote) }]
+  // 유튜브 영상은 주소를 그대로 넘기면 Gemini가 영상을 프레임(약 1초에 1장)과 소리로 읽는다.
+  if (tool === 'video' && refUrl) reqParts.unshift({ file_data: { file_uri: refUrl } })
   if (tool === 'image' && images) {
     for (const img of images) reqParts.push({ inline_data: { mime_type: img.mimeType, data: img.data } })
   }
@@ -241,7 +251,7 @@ async function callGemini(
   // 생각 단계 줄이기: 링크·이미지는 정답이 주어져 옮겨 적는 일이라 길게 생각할 필요가 없다.
   // 실측(같은 링크·같은 곡): 기본값은 생각 토큰 6천~9천 개를 쓰느라 35초, 'low'는 10초, 원본 코드 일치율은 같음.
   // 이미지는 도돌이표를 풀어 써야 해서 한 단계 높게 둔다. 제목만 넣는 모드는 기억에 의존하므로 기본값 그대로.
-  const thinkingLevel = tool === 'url' ? 'low' : tool === 'image' ? 'medium' : undefined
+  const thinkingLevel = tool === 'url' || tool === 'video' ? 'low' : tool === 'image' ? 'medium' : undefined
   const bodyWithThinking = thinkingLevel
     ? { ...body, generationConfig: { temperature: 0, thinkingConfig: { thinkingLevel } } }
     : body
@@ -316,7 +326,11 @@ async function callGemini(
       if (res.status === 403) {
         throw new GeminiError('API 키에 권한이 없어요. 설정 > 관리자에서 키를 확인해 주세요.', 'auth')
       }
-      const what = tool === 'url' ? '링크를 읽는 중에' : tool === 'image' ? '이미지를 읽는 중에' : ''
+      // 없는 영상·비공개·연령 제한 영상은 400(invalid argument)으로 온다(실측) — 다시 해도 같으므로 주소를 확인하게 한다.
+      if (tool === 'video' && res.status === 400) {
+        throw new GeminiError('유튜브 영상을 열지 못했어요. 주소가 맞는지, 비공개나 연령 제한 영상이 아닌지 확인해 주세요.', 'other')
+      }
+      const what = tool === 'url' ? '링크를 읽는 중에' : tool === 'video' ? '유튜브 영상을 보는 중에' : tool === 'image' ? '이미지를 읽는 중에' : ''
       throw new GeminiError(`AI가 ${what ? what + ' ' : ''}요청을 처리하지 못했어요(오류 코드 ${res.status}). 다시 시도해 주세요.`, 'other')
     }
   }
@@ -361,7 +375,7 @@ async function callGemini(
   const outputTokens = Number(meta.candidatesTokenCount) || 0
   // totalTokenCount는 thinking 토큰까지 포함 — 유료 과금은 이 기준. 없으면 input+output로 대체.
   const totalTokens = Number(meta.totalTokenCount) || inputTokens + outputTokens
-  return { text, inputTokens, outputTokens, totalTokens, searchUsed: actualSearchUsed, refUsed, imageUsed: tool === 'image', modelUsed }
+  return { text, inputTokens, outputTokens, totalTokens, searchUsed: actualSearchUsed, refUsed, videoUsed: tool === 'video', imageUsed: tool === 'image', modelUsed }
 }
 
 /** 이 API 키로 generateContent가 가능한 Gemini 모델 이름 목록을 조회. */
@@ -400,6 +414,8 @@ export interface GenerateResult {
   song: Song
   searchUsed: boolean
   refUsed: boolean
+  /** 유튜브 영상 화면의 코드를 읽어서 만든 경우 */
+  videoUsed: boolean
   imageUsed: boolean
   confidence?: Confidence
   basis?: string
@@ -419,8 +435,29 @@ function asConfidence(v: unknown): Confidence | undefined {
   return v === 'high' || v === 'medium' || v === 'low' ? v : undefined
 }
 
+/** 유튜브 영상 주소면 표준 주소(https://www.youtube.com/watch?v=ID)로 바꿔 돌려주고, 아니면 null.
+ *  watch?v= · youtu.be/ · shorts/ · live/ · embed/ 형태를 받는다. */
+export function youtubeWatchUrl(url: string): string | null {
+  const t = url.trim()
+  if (!t) return null
+  let u: URL
+  try {
+    u = new URL(/^https?:\/\//i.test(t) ? t : 'https://' + t)
+  } catch {
+    return null
+  }
+  const host = u.hostname.toLowerCase().replace(/^(www|m|music)\./, '')
+  let id: string | null = null
+  if (host === 'youtu.be') id = u.pathname.split('/')[1] ?? null
+  else if (host === 'youtube.com') {
+    if (u.pathname === '/watch') id = u.searchParams.get('v')
+    else id = u.pathname.match(/^\/(?:shorts|live|embed)\/([^/]+)/)?.[1] ?? null
+  }
+  return id && /^[\w-]{11}$/.test(id) ? `https://www.youtube.com/watch?v=${id}` : null
+}
+
 /** 제목(+아티스트)으로 악보를 생성해 Song(마디 모델)로 반환.
- *  정답 우선순위: 이미지 > 링크 > 웹 검색 > 학습 지식. */
+ *  정답 우선순위: 이미지 > 링크(유튜브 영상 포함) > 웹 검색 > 학습 지식. */
 export async function generateChart(
   title: string,
   artist: string,
@@ -443,6 +480,9 @@ export async function generateChart(
   if (imgs) {
     // 참고 이미지 모드: 첨부 악보 이미지를 정답 기준으로 전사
     result = await callGemini(t, a, settings, 'image', difficulty, undefined, imgs, note, signal)
+  } else if (ref && youtubeWatchUrl(ref)) {
+    // 유튜브 링크 모드: 영상 화면에 나오는 코드를 읽어 정답 기준으로 사용
+    result = await callGemini(t, a, settings, 'video', difficulty, youtubeWatchUrl(ref)!, undefined, note, signal)
   } else if (ref) {
     // 참고 링크 모드: url_context로 페이지를 읽어 정답 기준으로 사용
     result = await callGemini(t, a, settings, 'url', difficulty, ref, undefined, note, signal)
@@ -459,7 +499,7 @@ export async function generateChart(
     }
   }
   // 과금 기준 출력 = 전체 - 입력 (thinking 토큰 포함)
-  const genType: GenType = result.imageUsed ? 'image' : result.refUsed ? 'url' : result.searchUsed ? 'search' : 'knowledge'
+  const genType: GenType = result.imageUsed ? 'image' : result.refUsed || result.videoUsed ? 'url' : result.searchUsed ? 'search' : 'knowledge'
   recordUsage(result.inputTokens, result.totalTokens - result.inputTokens, genType)
 
   let chart: GenChart
@@ -480,6 +520,7 @@ export async function generateChart(
     song: toSong(chart, t, a),
     searchUsed: result.searchUsed,
     refUsed: result.refUsed,
+    videoUsed: result.videoUsed,
     imageUsed: result.imageUsed,
     confidence: asConfidence(chart.confidence),
     basis: typeof chart.basis === 'string' ? chart.basis.trim() : undefined,

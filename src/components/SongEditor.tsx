@@ -30,6 +30,9 @@ function GenNotice({ meta }: { meta: GenMeta }) {
   if (meta.imageUsed) {
     return <div className="notice notice--ok">첨부한 악보 이미지를 읽어서 생성했습니다{conf}{basis}{fb}</div>
   }
+  if (meta.videoUsed) {
+    return <div className="notice notice--ok">유튜브 영상 화면의 코드를 읽어서 생성했습니다 (영상 속 연주 키 기준){conf}{basis}{fb}</div>
+  }
   if (meta.refUsed) {
     return <div className="notice notice--ok">참고 링크를 읽어서 생성했습니다{conf}{basis}{fb}</div>
   }
