@@ -173,7 +173,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 /** 설정한 모델이 붐비거나(503) 무료 한도를 넘었거나(429) 없거나(404) 응답이 안 올 때 대신 시도할 모델.
  *  무료 한도는 모델마다 따로라 429에도 효과가 있다. 이 키로 못 쓰는 모델(404/403)은 건너뛴다.
  *  2.5 계열은 "신규 사용자 사용 불가"(404)라 넣지 않음. lite는 빠르지만 정확도가 낮아 마지막. */
-const FALLBACK_MODELS = ['gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-flash-lite-latest']
+const FALLBACK_MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-flash-lite-latest']
 
 /** 사용자에게 그대로 보여줄 오류. kind로 generateChart가 "검색 없이 재시도"할지 판단한다 —
  *  모델 붐빔·네트워크·키 문제는 다시 해도 같으므로 재시도하지 않는다. */
@@ -238,6 +238,13 @@ async function callGemini(
   }
   if (tool === 'search') body.tools = [{ google_search: {} }]
   else if (tool === 'url') body.tools = [{ url_context: {} }]
+  // 생각 단계 줄이기: 링크·이미지는 정답이 주어져 옮겨 적는 일이라 길게 생각할 필요가 없다.
+  // 실측(같은 링크·같은 곡): 기본값은 생각 토큰 6천~9천 개를 쓰느라 35초, 'low'는 10초, 원본 코드 일치율은 같음.
+  // 이미지는 도돌이표를 풀어 써야 해서 한 단계 높게 둔다. 제목만 넣는 모드는 기억에 의존하므로 기본값 그대로.
+  const thinkingLevel = tool === 'url' ? 'low' : tool === 'image' ? 'medium' : undefined
+  const bodyWithThinking = thinkingLevel
+    ? { ...body, generationConfig: { temperature: 0, thinkingConfig: { thinkingLevel } } }
+    : body
 
   // 같은 모델로 일시적 실패(5xx·네트워크)를 몇 번 재시도하고, 붐빔/한도/없는 모델이면 다음 모델로 넘어간다.
   const models = [s.model, ...FALLBACK_MODELS.filter((m) => m !== s.model)]
@@ -247,6 +254,7 @@ async function callGemini(
   modelLoop: for (const model of models) {
     const isFallback = model !== s.model
     const maxAttempts = isFallback ? 2 : 3
+    let useThinking = !!thinkingLevel // 이 설정을 모르는 모델이면 아래에서 빼고 다시 보낸다
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(s.apiKey)}`
     for (let attempt = 1; ; attempt++) {
       if (signal?.aborted) throw new GeminiError('생성을 취소했어요.', 'cancelled')
@@ -258,7 +266,7 @@ async function callGemini(
         res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
+          body: JSON.stringify(useThinking ? bodyWithThinking : body),
           signal: controller.signal,
         })
         clearTimeout(timer)
@@ -289,6 +297,10 @@ async function callGemini(
       lastStatus = res.status
       const t = (await res.text().catch(() => '')).replace(/\s+/g, ' ').trim()
       console.warn(`[MusicHelper] Gemini ${res.status} (${model}, ${tool}):`, t.slice(0, 300))
+      if (res.status === 400 && useThinking && /thinking/i.test(t)) {
+        useThinking = false // 생각 단계 설정을 지원하지 않는 모델(직접 입력한 구형 모델 등)
+        continue
+      }
       const transient = res.status >= 500
       if (transient && attempt < maxAttempts) {
         await sleep(attempt * 2000)

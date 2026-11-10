@@ -70,7 +70,7 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
   const abortRef = useRef<AbortController | null>(null)
   const keyReady = hasApiKey()
 
-  // 생성 중 경과 시간(링크·이미지 모드는 1분 넘게 걸려서 멈춘 건지 알 수 있게)
+  // 생성 중 경과 시간(모델이 붐비면 1분 넘게 걸려서, 멈춘 건지 알 수 있게)
   useEffect(() => {
     if (!loading) return
     setElapsed(0)
@@ -227,7 +227,7 @@ export function GenerateModal({ onClose, onGenerated, onOpenSettings }: Props) {
           {loading && (
             <div className="notice notice--busy">
               악보 생성 중… {elapsed}초
-              <br />보통 30초~1분, 링크·이미지를 읽을 땐 1~2분 걸려요.
+              <br />보통 10~30초 걸려요. AI 모델이 붐비면 1분 넘게 걸릴 수 있어요.
             </div>
           )}
           {error && <div className="notice notice--error">{error}</div>}
