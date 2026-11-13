@@ -27,6 +27,7 @@ interface GenChart {
   unknown?: unknown
   reason?: unknown
   confidence?: unknown
+  capo?: unknown
   basis?: unknown
 }
 
@@ -62,7 +63,8 @@ If the URL cannot be read, or it does not contain this song's chart, output ONLY
     // 실측: 귀로 듣고 코드를 따게 하면 키부터 틀린 악보를 자신 있게 지어낸다(같은 곡 2회 모두).
     // 화면에 보이는 코드만 읽게 하고, 없으면 거절하게 한다.
     source = `A YouTube video for this song is attached. It is the GROUND TRUTH — base the entire chart on it (then apply the arrangement rule).
-- Use ONLY chords that are VISIBLY SHOWN in the video frames: chord names, chord diagrams, tab, sheet music, or a lesson naming the chords. Read them from the screen and keep the key the video is played in.
+- Use ONLY chords that are VISIBLY SHOWN in the video frames: chord names, chord diagrams, tab, sheet music, or a lesson naming the chords. Read them from the screen and write them EXACTLY as shown — the chord shapes the player fingers. Do NOT transpose them to another key.
+- CAPO: if the video shows or says a capo position (e.g. "Capo 4", "카포 2프렛"), report it in the JSON as "capo": <fret number>; otherwise "capo": 0. With a capo, the chords stay as the shapes shown and "originalKey" is the key of those written shapes (e.g. G shapes with capo 4 → "originalKey": "G"), NOT the sounding key.
 - Do NOT work out chords by listening to the audio. If the video shows no chords on screen (e.g. a music video, a lyrics video, an audio-only upload, a live clip), output ONLY: {"unknown": true, "reason": "이 영상에는 코드가 화면에 나오지 않습니다."}.
 ${lyrics ? '' : `- Take lyrics from what is sung or shown in the video. If the video has no vocals and shows no lyrics, leave every "lyric" as "" instead of writing lyrics from memory.
 `}If the video cannot be accessed or is not this song, output ONLY: {"unknown": true, "reason": "<one Korean sentence why>"}.`
@@ -98,7 +100,7 @@ ACCURACY RULES — top priority, NEVER invent:
 ${userNote ? `\nUSER REQUEST — follow this as long as it doesn't conflict with the accuracy rules above: ${userNote}\n` : ''}
 Rules:
 - ${DIFFICULTY_RULE[difficulty]}
-- Write chords the way a guitarist actually plays them (e.g. C, Am7, G/B, FM7, Dsus4). Do NOT use a capo — write the sounding chords in a comfortable key.
+- Write chords the way a guitarist actually plays them (e.g. C, Am7, G/B, FM7, Dsus4).${tool === 'video' ? '' : ' Do NOT use a capo — write the sounding chords in a comfortable key.'}
 - REPEAT/NAVIGATION MARKS: sources (especially scanned sheet music images) often encode repeats instead of writing every bar out — repeat barlines (|: … :|), numbered 1st/2nd (or 1st/2nd/3rd) endings (volta brackets), D.C. (Da Capo = go back to the start), D.S. (Dal Segno = go back to the 𝄋 segno sign), "To Coda"/Coda jumps, and Fine (end here). You MUST mentally play through these jumps and output the chart as the FULLY UNROLLED final sequence of bars in actual performance order — never a literal top-to-bottom copy of the printed page. Concretely: a repeated section becomes two (or more) separate consecutive sections/bar-runs in the output (e.g. a 1st verse that repeats with a different 2nd ending produces "Verse 1" ending in the 1st-ending bars, then "Verse 2" ending in the 2nd-ending bars instead); a D.C./D.S. jump means the bars from that point are re-emitted again later in the output at the point they're actually played, up to the Fine/Coda. Do not add navigation instructions as text in a lyric/chord field — always resolve them into real, ordered bars.
 - Split the song into sections (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro …).
 - Each section is a list of bars (measures). Each bar has:
@@ -171,6 +173,8 @@ function toSong(c: GenChart, fbTitle: string, fbArtist: string): Song {
     genreTags: asStringArray(c.genreTags),
     moodTags: asStringArray(c.moodTags),
     status: 'want',
+    // 영상 모드에서만 받는 값. 영상에 나온 카포 위치(코드는 그 카포 기준 운지 모양).
+    capoFret: Number.isInteger(Number(c.capo)) && Number(c.capo) >= 1 && Number(c.capo) <= 11 ? Number(c.capo) : 0,
     sections: sections.length ? sections : [newSection()],
   })
 }

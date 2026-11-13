@@ -23,7 +23,7 @@ const ROW_SIZE = 4
 interface RowRef { secIdx: number; start: number; len: number }
 
 /** AI 생성 직후 — 무엇을 근거로 만들었고 얼마나 믿을 수 있는지 안내. */
-function GenNotice({ meta }: { meta: GenMeta }) {
+function GenNotice({ meta, capo }: { meta: GenMeta; capo?: number }) {
   const conf = meta.confidence ? ` · 신뢰도: ${CONFIDENCE_LABEL[meta.confidence]}` : ''
   const basis = meta.basis ? ` · 근거: ${meta.basis}` : ''
   const fb = meta.fallbackModel ? ` · 기본 모델이 붐벼서 ${meta.fallbackModel}로 대신 생성` : ''
@@ -33,15 +33,16 @@ function GenNotice({ meta }: { meta: GenMeta }) {
   // 가사 DB에서 가져왔으면 어느 곡의 가사인지 보여 준다(다른 곡이 잡혔는지 확인할 수 있게).
   const lyr = meta.lyricsSource ? ` · 가사: 가사 DB(${meta.lyricsSource})` : ''
   if (meta.videoUsed) {
+    const vidKey = capo ? `영상 운지 그대로, 카포 ${capo}프렛` : '영상 속 연주 키 기준'
     if (!meta.lyricsSource) {
       return (
         <div className="notice notice--warn">
-          유튜브 영상 화면의 코드를 읽어서 생성했습니다 (영상 속 연주 키 기준){conf}{basis}{fb}
+          유튜브 영상 화면의 코드를 읽어서 생성했습니다 ({vidKey}){conf}{basis}{fb}
           <br />가사 DB에서 이 곡을 찾지 못해 <b>가사는 AI가 영상에서 받아 적었습니다</b> — 틀릴 수 있으니 확인해 주세요.
         </div>
       )
     }
-    return <div className="notice notice--ok">유튜브 영상 화면의 코드를 읽어서 생성했습니다 (영상 속 연주 키 기준){conf}{basis}{lyr}{fb}</div>
+    return <div className="notice notice--ok">유튜브 영상 화면의 코드를 읽어서 생성했습니다 ({vidKey}){conf}{basis}{lyr}{fb}</div>
   }
   if (meta.refUsed) {
     return <div className="notice notice--ok">참고 링크를 읽어서 생성했습니다{conf}{basis}{fb}</div>
@@ -318,7 +319,7 @@ export function SongEditor({ song, genMeta, onSave, onCancel, onDelete }: Props)
         </div>
       </div>
 
-      {genMeta && <GenNotice meta={genMeta} />}
+      {genMeta && <GenNotice meta={genMeta} capo={draft.capoFret} />}
       <ChordStrip sections={draft.sections} rootKey={draft.originalKey} editable
         fingerings={draft.fingerings} hiddenChords={draft.hiddenChords} pinnedChords={draft.pinnedChords}
         onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))} />
